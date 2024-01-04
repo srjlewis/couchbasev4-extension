@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Phpfastcache\Drivers\Couchbasev4;
+namespace Phpfastcache\Extensions\Drivers\Couchbasev4;
 
 use Couchbase\BaseException as CouchbaseException;
 use Couchbase\Bucket as CouchbaseBucket;

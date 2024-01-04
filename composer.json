@@ -32,7 +32,10 @@
     "autoload": {
         "psr-4": {
             "Phpfastcache\\": "lib/Phpfastcache/"
-        }
+        },
+        "files": [
+            "lib/ExtensionRegister.php"
+        ]
     },
     "support": {
         "issues": "https://github.com/PHPSocialNetwork/phpfastcache/issues",
