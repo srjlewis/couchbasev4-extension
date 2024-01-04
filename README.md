@@ -14,5 +14,5 @@ This extension requires:
 
 - The PHP `Couchbase` extension 4.x at least
 - The composer `Couchbase/Couchbase` library 4.x at least
-- The PHP `Posix` to fix a known bug (@srjlewis link it here please)
+- The PHP `Posix` to fix a known bug [PCBC-886](https://issues.couchbase.com/projects/PCBC/issues/PCBC-886)
 
