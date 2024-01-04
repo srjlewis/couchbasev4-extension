@@ -27,11 +27,13 @@
         "ext-posix": "*",
         "ext-couchbase": "^4.0"
     },
-    "require-dev": {},
+    "require-dev": {
+        "webmozart/assert": "^1.11"
+    },
     "suggest": {},
     "autoload": {
         "psr-4": {
-            "Phpfastcache\\": "lib/Phpfastcache/"
+            "Phpfastcache\\Extensions\\": "lib/Phpfastcache/Extensions"
         },
         "files": [
             "lib/ExtensionRegister.php"

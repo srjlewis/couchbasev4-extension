@@ -72,6 +72,11 @@ class Driver implements AggregatablePoolInterface
         return extension_loaded('couchbase') && extension_loaded('posix');
     }
 
+    public function getHelp(): string
+    {
+        return 'Couchbasev4 requires the `php-couchbase` extension 4.x and the `php-posix` extension';
+    }
+
     /**
      * @return bool
      * @throws PhpfastcacheDriverCheckException
