@@ -1,0 +1,50 @@
+{
+    "name": "phpfastcache/couchbasev4-extension",
+    "type" : "phpfastcache-extension",
+    "description": "Phpfastcache Couchbase v4 extension",
+    "keywords": ["cache", "phpfastcache", "couchbase", "v4", "couchbasev4"],
+    "homepage": "https://github.com/PHPSocialNetwork/couchbasev4-extension",
+    "license": "MIT",
+    "readme": "README.md",
+    "minimum-stability": "beta",
+    "authors": [
+            {
+                "name": "Georges.L",
+                "email": "contact@geolim4.com",
+                "homepage": "https://github.com/Geolim4",
+                "role": "Project Manager"
+            },
+            {
+                "name": " Steven Lewis",
+                "homepage": "https://github.com/srjlewis",
+                "role": "Project Maintainer"
+            }
+    ],
+    "require": {
+        "php": ">=8.0",
+        "phpfastcache/phpfastcache": "^9.2",
+        "couchbase/couchbase": "^4.0",
+        "ext-posix": "*",
+        "ext-couchbase": "*"
+    },
+    "require-dev": {},
+    "suggest": {},
+    "autoload": {
+        "psr-4": {
+            "Phpfastcache\\": "lib/Phpfastcache/"
+        }
+    },
+    "support": {
+        "issues": "https://github.com/PHPSocialNetwork/phpfastcache/issues",
+        "wiki": "https://github.com/PHPSocialNetwork/phpfastcache/wiki",
+        "docs": "https://github.com/PHPSocialNetwork/phpfastcache/wiki",
+        "source": "https://github.com/PHPSocialNetwork/phpfastcache",
+        "security": "https://github.com/PHPSocialNetwork/phpfastcache/blob/master/SECURITY.md"
+    },
+    "funding": [
+        {
+            "type": "patreon",
+            "url": "https://www.patreon.com/geolim4"
+        }
+    ]
+}
