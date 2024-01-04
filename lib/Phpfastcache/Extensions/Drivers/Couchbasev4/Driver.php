@@ -10,6 +10,7 @@ use Couchbase\Cluster;
 use Couchbase\ClusterOptions;
 use Couchbase\Collection;
 use Couchbase\Exception\DocumentNotFoundException;
+use Couchbase\GetResult;
 use Couchbase\Scope;
 use Couchbase\UpsertOptions;
 use DateTimeInterface;
@@ -23,6 +24,7 @@ use Phpfastcache\Event\EventManagerInterface;
 use Phpfastcache\Exceptions\PhpfastcacheDriverCheckException;
 use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
 use Phpfastcache\Exceptions\PhpfastcacheLogicException;
+use Phpfastcache\Exceptions\PhpfastcacheUnsupportedMethodException;
 use ReflectionExtension;
 
 /**
@@ -54,7 +56,7 @@ class Driver implements AggregatablePoolInterface
      */
     public function driverCheck(): bool
     {
-        return extension_loaded('couchbase');
+        return extension_loaded('couchbase') && extension_loaded('posix');
     }
 
     /**
@@ -68,7 +70,7 @@ class Driver implements AggregatablePoolInterface
         }
 
         $extVersion = (new ReflectionExtension('couchbase'))->getVersion();
-        if (version_compare($extVersion, '4.0.0', '<') || version_compare($extVersion, '5.0.0', '>=')) {
+        if(version_compare($extVersion, '4.0.0','<' ) || version_compare($extVersion, '5.0.0','>=' )) {
             throw new PhpfastcacheDriverCheckException("You are using Couchbase extension $extVersion, You need to use a Couchbase V4 extension");
         }
 
@@ -122,6 +124,33 @@ class Driver implements AggregatablePoolInterface
 
     /**
      * @param ExtendedCacheItemInterface $item
+     * @return array<array<string, mixed>>
+     */
+    protected function driverReadMultiple(ExtendedCacheItemInterface ...$items): array
+    {
+        try {
+            $results = [];
+            $this->checkCurrentParentPID();
+            /**
+             * CouchbaseBucket::get() returns a GetResult interface
+             */
+            /** @var GetResult $document */
+            foreach ($this->getCollection()->getMulti($this->getKeys($items, true)) as $document) {
+                $content = $document->content();
+                if ($content) {
+                    $decodedDocument = $this->decodeDocument($content);
+                    $results[$decodedDocument[ExtendedCacheItemPoolInterface::DRIVER_KEY_WRAPPER_INDEX]] = $this->decodeDocument($content);
+                }
+            }
+
+            return $results;
+        } catch (DocumentNotFoundException) {
+            return [];
+        }
+    }
+
+    /**
+     * @param ExtendedCacheItemInterface $item
      * @return bool
      * @throws PhpfastcacheInvalidArgumentException
      * @throws PhpfastcacheLogicException
@@ -144,19 +173,31 @@ class Driver implements AggregatablePoolInterface
     }
 
     /**
-     * @param ExtendedCacheItemInterface $item
+     * @param string $key
+     * @param string $encodedKey
      * @return bool
-     * @throws PhpfastcacheInvalidArgumentException
      */
-    protected function driverDelete(ExtendedCacheItemInterface $item): bool
+    protected function driverDelete(string $key, string $encodedKey): bool
     {
-        $this->assertCacheItemType($item, Item::class);
-
         try {
             $this->checkCurrentParentPID();
-            $this->getCollection()->remove($item->getEncodedKey());
-            return true;
+            return $this->getCollection()->remove($encodedKey)->mutationToken() !== null;
         } catch (DocumentNotFoundException) {
+            return true;
+        } catch (CouchbaseException) {
+            return false;
+        }
+    }
+
+    /**
+     * @param string[] $keys
+     * @return bool
+     */
+    protected function driverDeleteMultiple(array $keys): bool
+    {
+        try {
+            $this->checkCurrentParentPID();
+            $this->getCollection()->removeMulti(array_map(fn(string $key) => $this->getEncodedKey($key), $keys));
             return true;
         } catch (CouchbaseException) {
             return false;
@@ -169,6 +210,23 @@ class Driver implements AggregatablePoolInterface
     protected function driverClear(): bool
     {
         $this->checkCurrentParentPID();
+        if(!$this->instance->buckets()->getBucket($this->getConfig()->getBucketName())->flushEnabled()) {
+            if($this->getConfig()->getFlushFailSilently()) {
+                return false;
+            }
+            throw new PhpfastcacheUnsupportedMethodException(
+                'Flushing operation is not enabled on your Bucket. See https://docs.couchbase.com/server/current/manage/manage-buckets/flush-bucket.html'
+            );
+        }
+
+        if (!$this->getConfig()->getAllowFlush()) {
+            if($this->getConfig()->getFlushFailSilently()) {
+                return false;
+            }
+            throw new PhpfastcacheUnsupportedMethodException(
+                'Flushing operation is disabled in config'
+            );
+        }
         $this->instance->buckets()->flush($this->getConfig()->getBucketName());
         return true;
     }
@@ -273,7 +331,7 @@ class Driver implements AggregatablePoolInterface
      */
     protected function decodeDocument(array $data): array
     {
-        $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX] = $this->decode($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
+        $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX] = $this->unserialize($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
         $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
             \DateTimeInterface::ATOM,
             $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX]

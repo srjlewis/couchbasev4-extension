@@ -5,32 +5,29 @@ declare(strict_types=1);
 namespace Phpfastcache\Extensions\Drivers\Couchbasev4;
 
 use Couchbase\ClusterOptions;
-use Couchbase\ThresholdLoggingOptions;
-use Couchbase\TransactionsConfiguration;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 
 class Config extends ConfigurationOption
 {
     protected const DEFAULT_VALUE = '_default';
-    protected const DEFAULT_HOST = '127.0.0.1';
+    protected const DEFAULT_HOST  = '127.0.0.1';
 
-    protected string $username = '';
-    protected string $password = '';
-    protected string $bucketName = self::DEFAULT_VALUE;
-    protected string $scopeName = self::DEFAULT_VALUE;
-    protected string $collectionName = self::DEFAULT_VALUE;
+    protected string $username          = '';
+    protected string $password          = '';
+    protected string $bucketName        = self::DEFAULT_VALUE;
+    protected string $scopeName         = self::DEFAULT_VALUE;
+    protected string $collectionName    = self::DEFAULT_VALUE;
+    protected array  $servers           = [];
+    protected bool   $secure            = false;
+    protected bool   $allowFlush        = true;
+    protected bool   $flushFailSilently = false;
 
-    protected array $servers = [];
-
-    protected bool $secure = false;
-
-    protected ClusterOptions $clusterOptions;
+    protected ?ClusterOptions $clusterOptions = null;
 
     public function __construct(array $parameters = [])
     {
         parent::__construct($parameters);
-        $this->clusterOptions = new ClusterOptions();
     }
 
 
@@ -141,6 +138,7 @@ class Config extends ConfigurationOption
         $this->bucketName = $bucketName;
         return $this;
     }
+
     /**
      * @return string
      */
@@ -181,408 +179,58 @@ class Config extends ConfigurationOption
         return $this;
     }
 
-    /*************************************************************************/
-    /*************************************************************************/
-    /*************************************************************************/
+    /**
+     * @param bool $allow
+     * @return $this
+     * @throws PhpfastcacheLogicException
+     */
+    public function setAllowFlush(bool $allow): Config
+    {
+        $this->enforceLockedProperty(__FUNCTION__);
+        $this->allowFlush = $allow;
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getAllowFlush(): bool
+    {
+        return $this->allowFlush;
+    }
+
+    /**
+     * @param bool $silent
+     * @return $this
+     * @throws PhpfastcacheLogicException
+     */
+    public function setFlushFailSilently(bool $silent): Config
+    {
+        $this->enforceLockedProperty(__FUNCTION__);
+        $this->flushFailSilently = $silent;
+        return $this;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getFlushFailSilently(): bool
+    {
+        return $this->flushFailSilently;
+    }
+
+    public function setClusterOptions(ClusterOptions $clusterOptions): Config
+    {
+        $this->enforceLockedProperty(__FUNCTION__);
+        $this->clusterOptions = $clusterOptions;
+        return $this;
+    }
 
     public function getClusterOptions(): ClusterOptions
     {
+        if (is_null($this->clusterOptions)) {
+            $this->clusterOptions = new ClusterOptions();
+        }
         return $this->clusterOptions;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setAnalyticsTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->analyticsTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setBootstrapTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->bootstrapTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setConnectTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->connectTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setDnsSrvTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->dnsSrvTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setKeyValueDurableTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->keyValueDurableTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setKeyValueTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->keyValueTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setManagementTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->managementTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setQueryTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->queryTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setResolveTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->resolveTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setSearchTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->searchTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setViewTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->viewTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $numberOfConnections
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setMaxHttpConnections(int $numberOfConnections): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->maxHttpConnections($numberOfConnections);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setConfigIdleRedialTimeout(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->configIdleRedialTimeout($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setConfigPollFloor(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->configPollFloor($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setConfigPollInterval(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->configPollInterval($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param int $milliseconds
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setTcpKeepAliveInterval(int $milliseconds): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->tcpKeepAliveInterval($milliseconds);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableClustermapNotification(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableClustermapNotification($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableCompression(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableCompression($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableDnsSrv(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableDnsSrv($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableMetrics(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableMetrics($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableMutationTokens(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableMutationTokens($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableTcpKeepAlive(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableTcpKeepAlive($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableTls(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableTls($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableTracing(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableTracing($enable);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setEnableUnorderedExecution(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->enableUnorderedExecution($enable);
-        return $this;
-    }
-
-    /**
-     * @param string $mode "any", "forceIpv4" or "forceIpv6"
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setUseIpProtocol(string $mode): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->useIpProtocol($mode);
-        return $this;
-    }
-
-    /**
-     * @param bool $enable
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setShowQueries(bool $enable): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->showQueries($enable);
-        return $this;
-    }
-
-    /**
-     * @param string $networkSelector
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setNetwork(string $networkSelector): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->network($networkSelector);
-        return $this;
-    }
-
-    /**
-     * @param string $certificatePath
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setTrustCertificate(string $certificatePath): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->trustCertificate($certificatePath);
-        return $this;
-    }
-
-    /**
-     * @param string $userAgentExtraString
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setUserAgentExtra(string $userAgentExtraString): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->userAgentExtra($userAgentExtraString);
-        return $this;
-    }
-
-    /**
-     * @param string $mode
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setTlsVerify(string $mode): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->tlsVerify($mode);
-        return $this;
-    }
-
-    /**
-     * @param ThresholdLoggingOptions $options
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setThresholdLoggingTracerOptions(ThresholdLoggingOptions $options): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->thresholdLoggingTracerOptions($options);
-        return $this;
-    }
-
-    /**
-     * @param TransactionsConfiguration $options
-     * @return Config
-     * @throws PhpfastcacheLogicException
-     */
-    public function setTransactionsConfiguration(TransactionsConfiguration $options): Config
-    {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions->transactionsConfiguration($options);
-        return $this;
     }
 }
