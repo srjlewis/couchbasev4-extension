@@ -232,7 +232,7 @@ class Config extends ConfigurationOption
         return $this->flushFailSilently;
     }
 
-    public function setClusterOptions(ClusterOptions $clusterOptions): Config
+    public function setClusterOptions(?ClusterOptions $clusterOptions): Config
     {
         $this->enforceLockedProperty(__FUNCTION__);
         $this->clusterOptions = $clusterOptions;
