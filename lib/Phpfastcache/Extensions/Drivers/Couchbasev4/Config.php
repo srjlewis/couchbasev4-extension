@@ -26,15 +26,18 @@ class Config extends ConfigurationOption
     protected const DEFAULT_VALUE = '_default';
     protected const DEFAULT_HOST  = '127.0.0.1';
 
+    /**
+     * @var array<string>
+     */
+    protected array $servers           = [];
     protected string $username          = '';
     protected string $password          = '';
     protected string $bucketName        = self::DEFAULT_VALUE;
     protected string $scopeName         = self::DEFAULT_VALUE;
     protected string $collectionName    = self::DEFAULT_VALUE;
-    protected array  $servers           = [];
-    protected bool   $secure            = false;
-    protected bool   $allowFlush        = true;
-    protected bool   $flushFailSilently = false;
+    protected bool $secure            = false;
+    protected bool $allowFlush        = true;
+    protected bool $flushFailSilently = false;
 
     protected ?ClusterOptions $clusterOptions = null;
 
@@ -43,32 +46,29 @@ class Config extends ConfigurationOption
         parent::__construct($parameters);
     }
 
-
+    /**
+     * @return array<string>
+     */
     public function getServers(): array
     {
         return $this->servers ?: [self::DEFAULT_HOST];
     }
 
     /**
-     * @param array $servers
-     * @return $this
+     * @param array<string> $servers
      * @throws PhpfastcacheLogicException
      */
-    public function setServers(array $servers): Config
+    public function setServers(array $servers): static
     {
-        foreach ($servers as $server) {
-            $this->addServer($server);
-        }
-        return $this;
+        return $this->setProperty('servers', $servers);
     }
 
     /**
      * @param string $host
      * @param int|null $port
-     * @return $this
      * @throws PhpfastcacheLogicException
      */
-    public function addServer(string $host, ?int $port = null): Config
+    public function addServer(string $host, ?int $port = null): static
     {
         $this->enforceLockedProperty(__FUNCTION__);
         $this->servers[] = $host . ($port ? ':' . $port : '');
@@ -77,14 +77,11 @@ class Config extends ConfigurationOption
 
     /**
      * @param bool $secure
-     * @return $this
      * @throws PhpfastcacheLogicException
      */
-    public function setSecure(bool $secure): Config
+    public function setSecure(bool $secure): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->secure = $secure;
-        return $this;
+        return $this->setProperty('secure', $secure);
     }
 
     public function getSecure(): bool
@@ -102,14 +99,11 @@ class Config extends ConfigurationOption
 
     /**
      * @param string $username
-     * @return Config
      * @throws PhpfastcacheLogicException
      */
-    public function setUsername(string $username): Config
+    public function setUsername(string $username): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->username = $username;
-        return $this;
+        return $this->setProperty('username', $username);
     }
 
     /**
@@ -122,14 +116,11 @@ class Config extends ConfigurationOption
 
     /**
      * @param string $password
-     * @return Config
      * @throws PhpfastcacheLogicException
      */
-    public function setPassword(string $password): Config
+    public function setPassword(string $password): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->password = $password;
-        return $this;
+        return $this->setProperty('password', $password);
     }
 
     /**
@@ -142,14 +133,11 @@ class Config extends ConfigurationOption
 
     /**
      * @param string $bucketName
-     * @return Config
      * @throws PhpfastcacheLogicException
      */
-    public function setBucketName(string $bucketName): Config
+    public function setBucketName(string $bucketName): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->bucketName = $bucketName;
-        return $this;
+        return $this->setProperty('bucketName', $bucketName);
     }
 
     /**
@@ -162,14 +150,11 @@ class Config extends ConfigurationOption
 
     /**
      * @param string $scopeName
-     * @return Config
      * @throws PhpfastcacheLogicException
      */
-    public function setScopeName(string $scopeName): Config
+    public function setScopeName(string $scopeName): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->scopeName = $scopeName;
-        return $this;
+        return $this->setProperty('scopeName', $scopeName);
     }
 
     /**
@@ -182,10 +167,9 @@ class Config extends ConfigurationOption
 
     /**
      * @param string $collectionName
-     * @return Config
      * @throws PhpfastcacheLogicException
      */
-    public function setCollectionName(string $collectionName): Config
+    public function setCollectionName(string $collectionName): static
     {
         $this->enforceLockedProperty(__FUNCTION__);
         $this->collectionName = $collectionName;
@@ -194,49 +178,41 @@ class Config extends ConfigurationOption
 
     /**
      * @param bool $allow
-     * @return $this
      * @throws PhpfastcacheLogicException
      */
-    public function setAllowFlush(bool $allow): Config
+    public function setAllowFlush(bool $allow): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->allowFlush = $allow;
-        return $this;
+        return $this->setProperty('enforceLockedProperty', $allow);
     }
 
     /**
      * @return bool
      */
-    public function getAllowFlush(): bool
+    public function isAllowFlush(): bool
     {
         return $this->allowFlush;
     }
 
     /**
      * @param bool $silent
-     * @return $this
      * @throws PhpfastcacheLogicException
      */
-    public function setFlushFailSilently(bool $silent): Config
+    public function setFlushFailSilently(bool $silent): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->flushFailSilently = $silent;
-        return $this;
+        return $this->setProperty('flushFailSilently', $silent);
     }
 
     /**
      * @return bool
      */
-    public function getFlushFailSilently(): bool
+    public function isFlushFailSilently(): bool
     {
         return $this->flushFailSilently;
     }
 
-    public function setClusterOptions(?ClusterOptions $clusterOptions): Config
+    public function setClusterOptions(?ClusterOptions $clusterOptions): static
     {
-        $this->enforceLockedProperty(__FUNCTION__);
-        $this->clusterOptions = $clusterOptions;
-        return $this;
+        return $this->setProperty('clusterOptions', $clusterOptions);
     }
 
     public function getClusterOptions(): ClusterOptions

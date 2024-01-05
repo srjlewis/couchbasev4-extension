@@ -88,7 +88,7 @@ class Driver implements AggregatablePoolInterface
         }
 
         $extVersion = (new ReflectionExtension('couchbase'))->getVersion();
-        if(version_compare($extVersion, '4.0.0','<' ) || version_compare($extVersion, '5.0.0','>=' )) {
+        if (version_compare($extVersion, '4.0.0', '<') || version_compare($extVersion, '5.0.0', '>=')) {
             throw new PhpfastcacheDriverCheckException("You are using Couchbase extension $extVersion, You need to use a Couchbase V4 extension");
         }
 
@@ -101,7 +101,7 @@ class Driver implements AggregatablePoolInterface
 
         $options = $this->getConfig()->getClusterOptions();
         $options->credentials($this->getConfig()->getUsername(), $this->getConfig()->getPassword());
-        $this->instance = new Cluster($connectionString, $options);
+        $this->instance = new Cluster($connectionString, $options); // @phpstan-ignore-line
 
         $this->setBucket($this->instance->bucket($this->getConfig()->getBucketName()));
         $this->setScope($this->getBucket()->scope($this->getConfig()->getScopeName()));
@@ -154,7 +154,7 @@ class Driver implements AggregatablePoolInterface
              */
             /** @var GetResult $document */
             foreach ($this->getCollection()->getMulti($this->getKeys($items, true)) as $document) {
-                if(!$document->error()) {
+                if (!$document->error()) {
                     $content = $document->content();
                     if ($content) {
                         $decodedDocument = $this->decodeDocument($content);
@@ -230,8 +230,8 @@ class Driver implements AggregatablePoolInterface
     protected function driverClear(): bool
     {
         $this->checkCurrentParentPID();
-        if(!$this->instance->buckets()->getBucket($this->getConfig()->getBucketName())->flushEnabled()) {
-            if($this->getConfig()->getFlushFailSilently()) {
+        if (!$this->instance->buckets()->getBucket($this->getConfig()->getBucketName())->flushEnabled()) {
+            if ($this->getConfig()->isFlushFailSilently()) {
                 return false;
             }
             throw new PhpfastcacheUnsupportedMethodException(
@@ -239,8 +239,8 @@ class Driver implements AggregatablePoolInterface
             );
         }
 
-        if (!$this->getConfig()->getAllowFlush()) {
-            if($this->getConfig()->getFlushFailSilently()) {
+        if (!$this->getConfig()->isAllowFlush()) {
+            if ($this->getConfig()->isFlushFailSilently()) {
                 return false;
             }
             throw new PhpfastcacheUnsupportedMethodException(
@@ -251,7 +251,7 @@ class Driver implements AggregatablePoolInterface
             $this->instance->buckets()->flush($this->getConfig()->getBucketName());
             return true;
         } catch (CouchbaseException) {
-            if($this->getConfig()->getFlushFailSilently()) {
+            if ($this->getConfig()->isFlushFailSilently()) {
                 return false;
             }
             throw new PhpfastcacheUnsupportedMethodException(
