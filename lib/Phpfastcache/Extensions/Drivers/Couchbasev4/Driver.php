@@ -17,7 +17,7 @@ declare(strict_types=1);
 
 namespace Phpfastcache\Extensions\Drivers\Couchbasev4;
 
-use Couchbase\BaseException as CouchbaseException;
+use Couchbase\Exception\CouchbaseException;
 use Couchbase\Bucket as CouchbaseBucket;
 use Couchbase\Cluster;
 use Couchbase\ClusterOptions;
@@ -154,10 +154,12 @@ class Driver implements AggregatablePoolInterface
              */
             /** @var GetResult $document */
             foreach ($this->getCollection()->getMulti($this->getKeys($items, true)) as $document) {
-                $content = $document->content();
-                if ($content) {
-                    $decodedDocument = $this->decodeDocument($content);
-                    $results[$decodedDocument[ExtendedCacheItemPoolInterface::DRIVER_KEY_WRAPPER_INDEX]] = $this->decodeDocument($content);
+                if(!$document->error()) {
+                    $content = $document->content();
+                    if ($content) {
+                        $decodedDocument = $this->decodeDocument($content);
+                        $results[$decodedDocument[ExtendedCacheItemPoolInterface::DRIVER_KEY_WRAPPER_INDEX]] = $this->decodeDocument($content);
+                    }
                 }
             }
 
@@ -245,8 +247,17 @@ class Driver implements AggregatablePoolInterface
                 'Flushing operation is disabled in config'
             );
         }
-        $this->instance->buckets()->flush($this->getConfig()->getBucketName());
-        return true;
+        try {
+            $this->instance->buckets()->flush($this->getConfig()->getBucketName());
+            return true;
+        } catch (CouchbaseException) {
+            if($this->getConfig()->getFlushFailSilently()) {
+                return false;
+            }
+            throw new PhpfastcacheUnsupportedMethodException(
+                'Flushing operation is enabled, but you don\'t have permissions to flush'
+            );
+        }
     }
 
     /**

@@ -28,7 +28,8 @@
         "ext-couchbase": "^4.0"
     },
     "require-dev": {
-        "webmozart/assert": "^1.11"
+        "webmozart/assert": "^1.11",
+        "ext-pcntl": "*"
     },
     "suggest": {},
     "autoload": {
