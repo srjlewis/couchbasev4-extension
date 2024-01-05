@@ -44,6 +44,15 @@
             "lib/ExtensionRegister.php"
         ]
     },
+    "scripts": {
+        "phpcs": "vendor/bin/phpcs lib/ --report=summary",
+        "phpmd": "vendor/bin/phpmd lib/ ansi phpmd.xml",
+        "phpstan": "vendor/bin/phpstan analyse lib/ -l 6 -c phpstan.neon",
+        "quality": ["@phpcs", "@phpmd", "@phpstan"],
+        "tests": [
+            "php ./tests/Couchbasev4.test.php"
+        ]
+    },
     "support": {
         "issues": "https://github.com/PHPSocialNetwork/phpfastcache/issues",
         "wiki": "https://github.com/PHPSocialNetwork/phpfastcache/wiki",
