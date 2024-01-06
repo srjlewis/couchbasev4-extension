@@ -47,9 +47,7 @@ use ReflectionExtension;
  */
 class Driver implements AggregatablePoolInterface
 {
-    use TaggableCacheItemPoolTrait {
-        __construct as __baseConstruct;
-    }
+    use TaggableCacheItemPoolTrait;
 
     protected Scope $scope;
 
@@ -58,11 +56,6 @@ class Driver implements AggregatablePoolInterface
     protected CouchbaseBucket $bucketInstance;
 
     protected int $currentParentPID = 0;
-
-    public function __construct(ConfigurationOption $config, string $instanceId, EventManagerInterface $em)
-    {
-        $this->__baseConstruct($config, $instanceId, $em);
-    }
 
     /**
      * @return bool
