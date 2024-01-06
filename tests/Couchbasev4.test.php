@@ -34,8 +34,6 @@ $config = (new CouchbaseConfig(include $configFileName))
 
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
 
-Assert::isInstanceOf($cacheInstance, \Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface::class);
-
 $cache = new Psr16Adapter($cacheInstance);
 $value = random_int(0, 254);
 
@@ -50,7 +48,11 @@ if ($pid == -1) {
     exit($cache->get('key1'));
 }
 
-Assert::true($value === pcntl_wexitstatus($status));
+if ($value === pcntl_wexitstatus($status)) {
+    $testHelper->assertPass('The exit code is the one expected');
+} else {
+    $testHelper->assertFail('The exit code is unexpected');
+}
 
 try {
     $testHelper->runCRUDTests($cacheInstance);
