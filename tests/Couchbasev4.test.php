@@ -14,11 +14,14 @@
 
 use Phpfastcache\CacheManager;
 use Phpfastcache\Extensions\Drivers\Couchbasev4\Config as CouchbaseConfig;
+use Phpfastcache\Exceptions\PhpfastcacheDriverConnectException;
 use Phpfastcache\Helper\Psr16Adapter;
+use Phpfastcache\Tests\Helper\TestHelper;
 use Webmozart\Assert\Assert;
 
 chdir(__DIR__);
 require_once __DIR__ . '/../vendor/autoload.php';
+$testHelper = new TestHelper('Couchbasev4 driver');
 
 $configFileName = __DIR__ . '/Configs/' . ($argv[1] ?? 'github-actions') . '.php';
 if (!file_exists($configFileName)) {
@@ -49,95 +52,12 @@ if ($pid == -1) {
 
 Assert::true($value === pcntl_wexitstatus($status));
 
-$pool = $cacheInstance;
-
-$poolClear = true;
-
-if ($poolClear) {
-    $pool->clear();
+try {
+    $testHelper->runCRUDTests($cacheInstance);
+} catch (PhpfastcacheDriverConnectException $e) {
+    $testHelper->assertSkip('Couchbase server unavailable: ' . $e->getMessage());
+    $testHelper->terminateTest();
 }
+$testHelper->terminateTest();
 
-$cacheKey = 'cache_key_' . bin2hex(random_bytes(8) . '_' . random_int(100, 999));
-$cacheValue = 'cache_data_' . random_int(1000, 999999);
-$cacheTag = 'cache_tag_' . bin2hex(random_bytes(8) . '_' . random_int(100, 999));
-$cacheTag2 = 'cache_tag_' . bin2hex(random_bytes(8) . '_' . random_int(100, 999));
-$cacheItem = $pool->getItem($cacheKey);
-
-Assert::false(
-    $cacheItem->getTtl() < $pool->getConfig()->getDefaultTtl() - 1,
-    \sprintf(
-        'The expected TTL of the cache item was ~%ds, got %ds',
-        $pool->getConfig()->getDefaultTtl(),
-        $cacheItem->getTtl()
-    )
-);
-
-$cacheItem->set($cacheValue)
-    ->addTags([$cacheTag, $cacheTag2]);
-
-Assert::true($pool->save($cacheItem), 'The pool failed to save an item.');
-
-unset($cacheItem);
-$pool->detachAllItems();
-
-$cacheItems = $pool->getItemsByTags([$cacheTag, $cacheTag2, 'unknown_tag'], $pool::TAG_STRATEGY_ALL);
-Assert::false(isset($cacheItems[$cacheKey]), 'The pool unexpectedly retrieved the cache item.');
-unset($cacheItems);
-$pool->detachAllItems();
-
-$cacheItems = $pool->getItemsByTags([$cacheTag, $cacheTag2], $pool::TAG_STRATEGY_ALL);
-Assert::true(isset($cacheItems[$cacheKey]), 'The pool failed to retrieve the cache item.');
-unset($cacheItems);
-$pool->detachAllItems();
-
-$cacheItems = $pool->getItemsByTags([$cacheTag, $cacheTag2, 'unknown_tag'], $pool::TAG_STRATEGY_ONLY);
-Assert::false(isset($cacheItems[$cacheKey]), 'The pool unexpectedly retrieved the cache item.');
-unset($cacheItems);
-$pool->detachAllItems();
-
-$cacheItems = $pool->getItemsByTags([$cacheTag, $cacheTag2], $pool::TAG_STRATEGY_ONLY);
-Assert::true(isset($cacheItems[$cacheKey]), 'The pool failed to retrieve the cache item.');
-unset($cacheItems);
-$pool->detachAllItems();
-
-$cacheItems = $pool->getItemsByTags([$cacheTag, 'unknown_tag'], $pool::TAG_STRATEGY_ONE);
-Assert::true(
-    isset($cacheItems[$cacheKey]) && $cacheItems[$cacheKey]->getKey() === $cacheKey,
-    'The pool failed to retrieve the cache item.'
-);
-
-$cacheItem = $cacheItems[$cacheKey];
-Assert::true($cacheItem->get() === $cacheValue, 'The pool failed to retrieve the expected value.');
-
-$cacheItem->append('_appended');
-$cacheValue .= '_appended';
-$pool->saveDeferred($cacheItem);
-Assert::true($pool->commit(), 'The pool failed to commit deferred cache item.');
-$pool->detachAllItems();
-unset($cacheItem);
-
-$cacheItem = $pool->getItem($cacheKey);
-Assert::true($cacheItem->get() === $cacheValue, 'The pool failed to retrieve the expected new value.');
-
-if ($poolClear) {
-    Assert::true(
-        $pool->deleteItem($cacheKey) && !$pool->getItem($cacheKey)->isHit(),
-        'The pool failed to delete the cache item.'
-    );
-
-    Assert::true(
-        $pool->clear(),
-        'The cluster failed to clear.'
-    );
-    $pool->detachAllItems();
-    unset($cacheItem);
-
-    $cacheItem = $pool->getItem($cacheKey);
-    Assert::true(
-        !$cacheItem->isHit(),
-        'The cache item still exists in pool.'
-    );
-}
-
-echo 'OK, tests passed.' . PHP_EOL;
 
