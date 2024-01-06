@@ -33,7 +33,7 @@ composer install phpfastcache/couchbasev4-extension
 Once this bug has been fixed the dependency suggestion will be removed. 
 If your application wants to fork the processes using `pcntl_fork()` the `Posix` extension is needed, and you want the fix to be enabled, set up the config like this:
 ```php
-$config = (new CouchbaseConfig())->doForkDetection(true);
+$config = (new CouchbaseConfig())->setDoForkDetection(true);
 ```
 
 2️⃣ Also the PHP `Pcntl` if you plan to contribute to this project and run the tests before pushing your Merge Request.
