@@ -24,18 +24,19 @@
         "php": ">=8.0",
         "phpfastcache/phpfastcache": "^9.2",
         "couchbase/couchbase": "^4.0",
-        "ext-posix": "*",
         "ext-couchbase": "^4.0"
+    },
+    "suggest": {
+        "ext-posix": "*",
+        "ext-pcntl": "*"
     },
     "require-dev": {
         "webmozart/assert": "^1.11",
-        "ext-pcntl": "*",
         "phpmd/phpmd": "@stable",
         "squizlabs/php_codesniffer": "@stable",
         "phpstan/phpstan": "^1.5",
         "jetbrains/phpstorm-stubs": "dev-master"
     },
-    "suggest": {},
     "autoload": {
         "psr-4": {
             "Phpfastcache\\Extensions\\": "lib/Phpfastcache/Extensions"

@@ -26,6 +26,7 @@ if (!file_exists($configFileName)) {
 }
 
 $config = (new CouchbaseConfig(include $configFileName))
+    ->setDoPosixCheck(true)
     ->setUseStaticItemCaching(false);
 
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);

@@ -19,6 +19,7 @@ namespace Phpfastcache\Extensions\Drivers\Couchbasev4;
 
 use Couchbase\ClusterOptions;
 use Phpfastcache\Config\ConfigurationOption;
+use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
 use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 
 class Config extends ConfigurationOption
@@ -38,6 +39,7 @@ class Config extends ConfigurationOption
     protected bool $secure            = false;
     protected bool $allowFlush        = true;
     protected bool $flushFailSilently = false;
+    protected bool $doPosixCheck      = false;
 
     protected ?ClusterOptions $clusterOptions = null;
 
@@ -221,5 +223,19 @@ class Config extends ConfigurationOption
             $this->clusterOptions = new ClusterOptions();
         }
         return $this->clusterOptions;
+    }
+
+    public function isDoPosixCheck(): bool
+    {
+        return $this->doPosixCheck;
+    }
+
+    public function setDoPosixCheck(bool $doPosixCheck): static
+    {
+        if ($doPosixCheck && !extension_loaded('posix')) {
+            throw new PhpfastcacheInvalidArgumentException('Posix extension is required to enable the doPosixCheck config entry.');
+        }
+
+        return $this->setProperty('doPosixCheck', $doPosixCheck);
     }
 }
