@@ -62,12 +62,12 @@ class Driver implements AggregatablePoolInterface
      */
     public function driverCheck(): bool
     {
-        return extension_loaded('couchbase') && (!$this->getConfig()->isDoPosixCheck() || extension_loaded('posix'));
+        return extension_loaded('couchbase') && (!$this->getConfig()->isDoForkDetection() || extension_loaded('posix'));
     }
 
     public function getHelp(): string
     {
-        return 'Couchbasev4 requires the `php-couchbase` extension 4.x and optionally the `php-posix` extension if you enabled the config "doPosixCheck".';
+        return 'Couchbasev4 requires the `php-couchbase` extension 4.x and optionally the `php-posix` extension if you enabled the config "doForkDetection".';
     }
 
     /**
@@ -85,7 +85,7 @@ class Driver implements AggregatablePoolInterface
             throw new PhpfastcacheDriverCheckException("You are using Couchbase extension $extVersion, You need to use a Couchbase V4 extension");
         }
 
-        if ($this->getConfig()->isDoPosixCheck() && extension_loaded('posix')) {
+        if ($this->getConfig()->isDoForkDetection() && extension_loaded('posix')) {
             $this->currentParentPID = posix_getppid();
         }
 
@@ -113,7 +113,7 @@ class Driver implements AggregatablePoolInterface
      */
     protected function checkCurrentParentPID(): void
     {
-        if ($this->getConfig()->isDoPosixCheck() && extension_loaded('posix')) {
+        if ($this->getConfig()->isDoForkDetection() && extension_loaded('posix')) {
             if ($this->currentParentPID !== posix_getppid()) {
                 $this->driverConnect();
             }

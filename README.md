@@ -40,9 +40,9 @@ composer install phpfastcache/couchbasev4-extension
 #### ⚠️ This extension optionally requires: 
 1️⃣ The PHP `Posix` to fix a known Couchbase Extension bug [PCBC-886](https://issues.couchbase.com/projects/PCBC/issues/PCBC-886).  
 Once this bug has been fixed the dependency suggestion will be removed. 
-If your application do manipulate processes with `Posix` extension, and you want the fix to be enabled, set up the config like this:
+If your application wants to fork the processes using `pcntl_fork()` the `Posix` extension is needed, and you want the fix to be enabled, set up the config like this:
 ```php
-$config = (new CouchbaseConfig())->setDoPosixCheck(true);
+$config = (new CouchbaseConfig())->doForkDetection(true);
 ```
 
 2️⃣ Also the PHP `Pcntl` if you plan to contribute to this project and run the tests before pushing your Merge Request.

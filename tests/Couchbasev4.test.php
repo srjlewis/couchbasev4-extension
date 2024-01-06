@@ -31,7 +31,7 @@ if (!file_exists($configFileName)) {
 $testHelper->printInfoText('Running forking failure process test');
 
 $config = (new CouchbaseConfig(include $configFileName))
-    ->setDoPosixCheck(false)
+    ->setDoForkDetection(false)
     ->setUseStaticItemCaching(false);
 
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
@@ -60,7 +60,7 @@ if ($value === pcntl_wexitstatus($status)) {
 $testHelper->printInfoText('Running forking success process test');
 
 $config = (new CouchbaseConfig(include $configFileName))
-    ->setDoPosixCheck(true)
+    ->setDoForkDetection(true)
     ->setUseStaticItemCaching(false);
 
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
