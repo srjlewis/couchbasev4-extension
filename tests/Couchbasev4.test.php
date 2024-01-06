@@ -139,3 +139,5 @@ if ($poolClear) {
     );
 }
 
+echo 'OK, tests passed.' . PHP_EOL;
+
