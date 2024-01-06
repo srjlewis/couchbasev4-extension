@@ -12,6 +12,7 @@ permissions:
 jobs:
   run:
     runs-on: ${{ matrix.operating-system }}
+    timeout-minutes: 60
     strategy:
       matrix:
         operating-system: [ubuntu-latest]
@@ -23,6 +24,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Install Couchbase Server
+        run: ./tests/Scripts/install_couchbase.sh
 
       - name: Setup cache environment
         id: extcache
