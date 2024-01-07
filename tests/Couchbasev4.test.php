@@ -30,7 +30,7 @@ if (!file_exists($configFileName)) {
 
 $testHelper->printInfoText('Running forking failure process test');
 
-$config = (new CouchbaseConfig(include $configFileName))
+$config = (include $configFileName)
     ->setDoForkDetection(false)
     ->setUseStaticItemCaching(false);
 
