@@ -47,6 +47,7 @@
     },
     "scripts": {
         "phpcs": "vendor/bin/phpcs lib/ --report=summary",
+        "phpcbf": "vendor/bin/phpcbf lib/ --report=summary",
         "phpmd": "vendor/bin/phpmd lib/ ansi phpmd.xml",
         "phpstan": "vendor/bin/phpstan analyse lib/ -l 6 -c phpstan.neon",
         "quality": ["@phpcs", "@phpmd", "@phpstan"],
