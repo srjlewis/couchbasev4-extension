@@ -7,5 +7,5 @@ return (static fn(Couchbasev4Config $config) => $config->setItemDetailedDate(tru
     ->setServers(['127.0.0.1'])
     ->setBucketName('phpfastcache')
     ->setScopeName('_default')
-    ->setCollectionName('collectionName')
+    ->setCollectionName('_default')
 )(new Couchbasev4Config());
