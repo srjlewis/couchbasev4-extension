@@ -59,7 +59,7 @@ if ($value === pcntl_wexitstatus($status)) {
 
 $testHelper->printInfoText('Running forking success process test');
 
-$config = (new CouchbaseConfig(include $configFileName))
+$config = (include $configFileName)
     ->setDoForkDetection(true)
     ->setUseStaticItemCaching(false);
 
