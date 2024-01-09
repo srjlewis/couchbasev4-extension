@@ -37,7 +37,7 @@ $config = (include $configFileName)
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
 
 $cache = new Psr16Adapter($cacheInstance);
-$value = random_int(0, 254);
+$value = random_int(1, 254);
 
 $cache->set('forkFailTestKey', $value);
 
@@ -66,7 +66,7 @@ $config = (include $configFileName)
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
 
 $cache = new Psr16Adapter($cacheInstance);
-$value = random_int(0, 254);
+$value = random_int(1, 254);
 
 $cache->set('forkSuccessTestKey', $value);
 
