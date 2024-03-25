@@ -86,6 +86,11 @@ class Driver implements AggregatablePoolInterface
         }
 
         if ($this->getConfig()->isDoForkDetection() && extension_loaded('posix')) {
+            // https://issues.couchbase.com/browse/PCBC-984
+            if (version_compare($extVersion, '4.2.0', '=')) {
+                throw new PhpfastcacheDriverCheckException("You are using Couchbase extension $extVersion, This version has a known bug with pcntl_fork()");
+            }
+
             $this->currentParentPID = posix_getppid();
         }
 
