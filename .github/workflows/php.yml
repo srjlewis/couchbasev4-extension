@@ -18,9 +18,10 @@ jobs:
       matrix:
         operating-system: [ubuntu-latest]
         php-versions: ['8.0', '8.1', '8.2', '8.3']
-    name: PHP ${{ matrix.php-versions }} quality/tests on ${{ matrix.operating-system }}
+        ext-versions: ['couchbase', 'couchbase-4.1.6', 'couchbase-4.2.0']
+    name: PHP ${{ matrix.php-versions }} using ${{ matrix.ext-versions }} quality/tests on ${{ matrix.operating-system }}
     env:
-      extensions: couchbase, pcntl, posix
+      extensions: pcntl, posix
       key: cache-v1
     steps:
       - name: Checkout
@@ -48,7 +49,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: ${{ env.extensions }}
+          extensions: ${{ env.extensions }} ${{ matrix.ext-versions }}
 
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
