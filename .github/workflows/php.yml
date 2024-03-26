@@ -18,7 +18,7 @@ jobs:
       matrix:
         operating-system: [ubuntu-latest]
         php-versions: ['8.0', '8.1', '8.2', '8.3']
-        ext-versions: ['couchbase', 'couchbase-4.1.6', 'couchbase-4.2.0']
+        ext-versions: ['couchbase-4.1.6', 'couchbase']
     name: PHP ${{ matrix.php-versions }} using ${{ matrix.ext-versions }} quality/tests on ${{ matrix.operating-system }}
     env:
       extensions: ${{ matrix.ext-versions }}, pcntl, posix
