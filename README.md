@@ -29,11 +29,27 @@ composer install phpfastcache/couchbasev4-extension
 2️⃣ The composer `Couchbase/Couchbase` library 4.x at least
 
 #### ⚠️ This extension optionally requires: 
-1️⃣ The PHP `Posix` to fix a known Couchbase Extension bug [PCBC-886](https://issues.couchbase.com/projects/PCBC/issues/PCBC-886).  
-Once this bug has been fixed the dependency suggestion will be removed. 
-If your application wants to fork the processes using `pcntl_fork()` the `Posix` extension is needed, and you want the fix to be enabled, set up the config like this:
+1️⃣ The PHP `Posix` extension is needed use `pcntl_fork()` for process forking.  
+
+To fork a php process correctly you will need to tell the Couchbase diver to prepare for the fork.
+
+You **must** call the drivers `Phpfastcache\Drivers\Couchbasev4\Driver::prepareToFork()` just before the `pcntl_fork()` call.
+
+#### Example
 ```php
-$config = (new CouchbaseConfig())->setDoForkDetection(true);
+try {
+    \Phpfastcache\Drivers\Couchbasev4\Driver::prepareToFork();
+    $pid = pcntl_fork();
+    if ($pid == -1) {
+        // There was a problem with forking the process
+    } else if ($pid) {
+        // continue parent process operations
+    } else {
+        // continue child process operations
+    }
+} catch (PhpfastcacheDriverCheckException) {
+    // the driver did not allow you to fork the process
+}
 ```
 
 2️⃣ Also the PHP `Pcntl` if you plan to contribute to this project and run the tests before pushing your Merge Request.
