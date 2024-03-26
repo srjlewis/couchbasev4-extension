@@ -9,6 +9,7 @@
         <exclude name="CyclomaticComplexity" />
         <exclude name="NPathComplexity" />
         <exclude name="ExcessiveMethodLength" />
+        <exclude name="ExcessiveClassComplexity" />
     </rule>
     <rule ref="rulesets/controversial.xml" />
     <rule ref="rulesets/design.xml">
@@ -91,6 +92,11 @@
     <rule ref="rulesets/codesize.xml/NPathComplexity">
         <properties>
             <property name="minimum" value="500" />
+        </properties>
+    </rule>
+    <rule ref="rulesets/codesize.xml/ExcessiveClassComplexity">
+        <properties>
+            <property name="maximum" value="60" />
         </properties>
     </rule>
 </ruleset>

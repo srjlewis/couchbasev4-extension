@@ -160,6 +160,7 @@ class Driver implements AggregatablePoolInterface
         }
 
         if (version_compare(static::$extVersion, '4.2.1', '>=')) {
+            /** @phpstan-ignore-next-line */
             Cluster::notifyFork("prepare");
         }
 
@@ -182,16 +183,17 @@ class Driver implements AggregatablePoolInterface
             }
 
             if (static::$prepareToForkPPID) {
-                if (version_compare(static::$extVersion, '4.2.0', '<')) {
-                    if (static::$prepareToForkPPID !== posix_getpid()) {
-                        $this->connect(posix_getppid());
-                    }
+                if (version_compare(static::$extVersion, '4.2.0', '<') && static::$prepareToForkPPID !== posix_getpid()) {
+                    $this->connect(posix_getppid());
+
                 }
 
                 if (version_compare(static::$extVersion, '4.2.1', '>=')) {
                     if (static::$prepareToForkPPID === posix_getpid()) {
+                        /** @phpstan-ignore-next-line */
                         Cluster::notifyFork("parent");
                     } else {
+                        /** @phpstan-ignore-next-line */
                         Cluster::notifyFork("child");
                     }
                 }
