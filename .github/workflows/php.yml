@@ -21,7 +21,7 @@ jobs:
         ext-versions: ['couchbase', 'couchbase-4.1.6', 'couchbase-4.2.0']
     name: PHP ${{ matrix.php-versions }} using ${{ matrix.ext-versions }} quality/tests on ${{ matrix.operating-system }}
     env:
-      extensions: pcntl, posix
+      extensions: ${{ matrix.ext-versions }}, pcntl, posix
       key: cache-v1
     steps:
       - name: Checkout
@@ -49,7 +49,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: ${{ env.extensions }} ${{ matrix.ext-versions }}
+          extensions: ${{ env.extensions }}
 
       - name: Validate composer.json and composer.lock
         run: composer validate --strict
