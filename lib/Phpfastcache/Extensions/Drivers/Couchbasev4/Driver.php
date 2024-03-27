@@ -26,6 +26,7 @@ use Couchbase\Cluster;
 use Couchbase\ClusterOptions;
 use Couchbase\Collection;
 use Couchbase\Exception\DocumentNotFoundException;
+use Couchbase\Exception\InvalidArgumentException;
 use Couchbase\Exception\TimeoutException;
 use Couchbase\GetResult;
 use Couchbase\Scope;
@@ -126,6 +127,9 @@ class Driver implements AggregatablePoolInterface
         return $this->connect();
     }
 
+    /**
+     * @throws InvalidArgumentException
+     */
     protected function connect(?int $appendPPID = null): bool
     {
         $schema  = $this->getConfig()->getSecure() ? 'couchbases' : 'couchbase';
@@ -135,12 +139,7 @@ class Driver implements AggregatablePoolInterface
 
         $options = $this->getConfig()->getClusterOptions();
         $options->credentials($this->getConfig()->getUsername(), $this->getConfig()->getPassword());
-        try {
-            $this->instance = new Cluster($connectionString, $options); // @phpstan-ignore-line
-        } catch (Exception) {
-            return false;
-        }
-
+        $this->instance = new Cluster($connectionString, $options); // @phpstan-ignore-line
         $this->setBucket($this->instance->bucket($this->getConfig()->getBucketName()));
         $this->setScope($this->getBucket()->scope($this->getConfig()->getScopeName()));
         $this->setCollection($this->getScope()->collection($this->getConfig()->getCollectionName()));
