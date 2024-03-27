@@ -11,6 +11,9 @@
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  * @author Steven Lewis (srjlewis) https://github.com/srjlewis
  * @author Contributors  https://github.com/PHPSocialNetwork/phpfastcache/graphs/contributors
+ *
+ * @noinspection PhpMultipleClassDeclarationsInspection
+ * @noinspection PhpComposerExtensionStubsInspection
  */
 
 declare(strict_types=1);
@@ -23,10 +26,13 @@ use Couchbase\Cluster;
 use Couchbase\ClusterOptions;
 use Couchbase\Collection;
 use Couchbase\Exception\DocumentNotFoundException;
+use Couchbase\Exception\TimeoutException;
 use Couchbase\GetResult;
 use Couchbase\Scope;
 use Couchbase\UpsertOptions;
+use DateTime;
 use DateTimeInterface;
+use Exception;
 use Phpfastcache\Cluster\AggregatablePoolInterface;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
@@ -35,14 +41,15 @@ use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
 use Phpfastcache\Core\Pool\TaggableCacheItemPoolTrait;
 use Phpfastcache\Entities\DriverStatistic;
 use Phpfastcache\Event\EventManagerInterface;
-use Phpfastcache\Exceptions\PhpfastcacheCoreException;
 use Phpfastcache\Exceptions\PhpfastcacheDriverCheckException;
-use Phpfastcache\Exceptions\PhpfastcacheDriverConnectException;
 use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
-use Phpfastcache\Exceptions\PhpfastcacheIOException;
 use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 use Phpfastcache\Exceptions\PhpfastcacheUnsupportedMethodException;
 use ReflectionExtension;
+
+use function bin2hex;
+use function class_exists;
+use function random_bytes;
 
 /**
  * @property Cluster $instance Instance of driver service
@@ -76,11 +83,6 @@ class Driver implements AggregatablePoolInterface
      * @param ConfigurationOption $config
      * @param string $instanceId
      * @param EventManagerInterface $em
-     * @throws PhpfastcacheDriverConnectException
-     * @throws PhpfastcacheInvalidArgumentException
-     * @throws PhpfastcacheCoreException
-     * @throws PhpfastcacheDriverCheckException
-     * @throws PhpfastcacheIOException
      */
     public function __construct(ConfigurationOption $config, string $instanceId, EventManagerInterface $em)
     {
@@ -114,7 +116,7 @@ class Driver implements AggregatablePoolInterface
      */
     protected function driverConnect(): bool
     {
-        if (!\class_exists(ClusterOptions::class)) {
+        if (!class_exists(ClusterOptions::class)) {
             throw new PhpfastcacheDriverCheckException('You are using the Couchbase PHP SDK 2.x which is no longer supported in Phpfastcache v9');
         }
 
@@ -133,7 +135,11 @@ class Driver implements AggregatablePoolInterface
 
         $options = $this->getConfig()->getClusterOptions();
         $options->credentials($this->getConfig()->getUsername(), $this->getConfig()->getPassword());
-        $this->instance = new Cluster($connectionString, $options); // @phpstan-ignore-line
+        try {
+            $this->instance = new Cluster($connectionString, $options); // @phpstan-ignore-line
+        } catch (Exception) {
+            return false;
+        }
 
         $this->setBucket($this->instance->bucket($this->getConfig()->getBucketName()));
         $this->setScope($this->getBucket()->scope($this->getConfig()->getScopeName()));
@@ -160,7 +166,10 @@ class Driver implements AggregatablePoolInterface
         }
 
         if (version_compare(static::$extVersion, '4.2.1', '>=')) {
-            /** @phpstan-ignore-next-line */
+            /**
+             * @phpstan-ignore-next-line
+             * @noinspection PhpUndefinedMethodInspection
+             */
             Cluster::notifyFork("prepare");
         }
 
@@ -189,10 +198,16 @@ class Driver implements AggregatablePoolInterface
 
                 if (version_compare(static::$extVersion, '4.2.1', '>=')) {
                     if (static::$prepareToForkPPID === posix_getpid()) {
-                        /** @phpstan-ignore-next-line */
+                        /**
+                         * @phpstan-ignore-next-line
+                         * @noinspection PhpUndefinedMethodInspection
+                         */
                         Cluster::notifyFork("parent");
                     } else {
-                        /** @phpstan-ignore-next-line */
+                        /**
+                         * @phpstan-ignore-next-line
+                         * @noinspection PhpUndefinedMethodInspection
+                         */
                         Cluster::notifyFork("child");
                     }
                 }
@@ -205,6 +220,9 @@ class Driver implements AggregatablePoolInterface
     /**
      * @param ExtendedCacheItemInterface $item
      * @return ?array<string, mixed>
+     * @throws CouchbaseException
+     * @throws PhpfastcacheDriverCheckException
+     * @throws TimeoutException
      */
     protected function driverRead(ExtendedCacheItemInterface $item): ?array
     {
@@ -220,8 +238,10 @@ class Driver implements AggregatablePoolInterface
     }
 
     /**
-     * @param ExtendedCacheItemInterface $item
+     * @param ExtendedCacheItemInterface ...$item
      * @return array<array<string, mixed>>
+     * @throws PhpfastcacheDriverCheckException
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     protected function driverReadMultiple(ExtendedCacheItemInterface ...$items): array
     {
@@ -253,6 +273,7 @@ class Driver implements AggregatablePoolInterface
      * @return bool
      * @throws PhpfastcacheInvalidArgumentException
      * @throws PhpfastcacheLogicException
+     * @throws PhpfastcacheDriverCheckException
      */
     protected function driverWrite(ExtendedCacheItemInterface $item): bool
     {
@@ -275,6 +296,7 @@ class Driver implements AggregatablePoolInterface
      * @param string $key
      * @param string $encodedKey
      * @return bool
+     * @throws PhpfastcacheDriverCheckException
      */
     protected function driverDelete(string $key, string $encodedKey): bool
     {
@@ -291,6 +313,8 @@ class Driver implements AggregatablePoolInterface
     /**
      * @param string[] $keys
      * @return bool
+     * @throws PhpfastcacheDriverCheckException
+     * @throws PhpfastcacheLogicException
      */
     protected function driverDeleteMultiple(array $keys): bool
     {
@@ -305,6 +329,9 @@ class Driver implements AggregatablePoolInterface
 
     /**
      * @return bool
+     * @throws PhpfastcacheDriverCheckException
+     * @throws PhpfastcacheUnsupportedMethodException
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     protected function driverClear(): bool
     {
@@ -341,7 +368,7 @@ class Driver implements AggregatablePoolInterface
 
     /**
      * @return DriverStatistic
-     * @throws \Exception
+     * @throws Exception
      */
     public function getStats(): DriverStatistic
     {
@@ -350,7 +377,7 @@ class Driver implements AggregatablePoolInterface
          * Between SDK 2 and 3 we lost a lot of useful information :(
          * @see https://docs.couchbase.com/java-sdk/current/project-docs/migrating-sdk-code-to-3.n.html#management-apis
          */
-        $info = $this->instance->diagnostics(\bin2hex(\random_bytes(16)));
+        $info = $this->instance->diagnostics(bin2hex(random_bytes(16)));
 
         return (new DriverStatistic())
             ->setSize(0)
@@ -424,10 +451,10 @@ class Driver implements AggregatablePoolInterface
 
         if ($this->getConfig()->isItemDetailedDate()) {
             $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX]
-                ->format(\DateTimeInterface::ATOM);
+                ->format(DateTimeInterface::ATOM);
 
             $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX]
-                ->format(\DateTimeInterface::ATOM);
+                ->format(DateTimeInterface::ATOM);
         }
 
         return $data;
@@ -440,19 +467,19 @@ class Driver implements AggregatablePoolInterface
     protected function decodeDocument(array $data): array
     {
         $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]  = $this->unserialize($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
-        $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
-            \DateTimeInterface::ATOM,
+        $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = DateTime::createFromFormat(
+            DateTimeInterface::ATOM,
             $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX]
         );
 
         if ($this->getConfig()->isItemDetailedDate()) {
-            $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
-                \DateTimeInterface::ATOM,
+            $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = DateTime::createFromFormat(
+                DateTimeInterface::ATOM,
                 $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX]
             );
 
-            $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
-                \DateTimeInterface::ATOM,
+            $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX] = DateTime::createFromFormat(
+                DateTimeInterface::ATOM,
                 $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX]
             );
         }
