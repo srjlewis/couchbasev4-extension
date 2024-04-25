@@ -28,6 +28,7 @@ use Couchbase\Collection;
 use Couchbase\Exception\DocumentNotFoundException;
 use Couchbase\Exception\InvalidArgumentException;
 use Couchbase\Exception\TimeoutException;
+use Couchbase\ForkEvent;
 use Couchbase\GetResult;
 use Couchbase\Scope;
 use Couchbase\UpsertOptions;
@@ -165,11 +166,7 @@ class Driver implements AggregatablePoolInterface
         }
 
         if (version_compare(static::$extVersion, '4.2.1', '>=')) {
-            /**
-             * @phpstan-ignore-next-line
-             * @noinspection PhpUndefinedMethodInspection
-             */
-            Cluster::notifyFork("prepare");
+            Cluster::notifyFork(ForkEvent::PREPARE);
         }
 
         static::$prepareToForkPPID = posix_getpid();
@@ -197,17 +194,9 @@ class Driver implements AggregatablePoolInterface
 
                 if (version_compare(static::$extVersion, '4.2.1', '>=')) {
                     if (static::$prepareToForkPPID === posix_getpid()) {
-                        /**
-                         * @phpstan-ignore-next-line
-                         * @noinspection PhpUndefinedMethodInspection
-                         */
-                        Cluster::notifyFork("parent");
+                        Cluster::notifyFork(ForkEvent::PARENT);
                     } else {
-                        /**
-                         * @phpstan-ignore-next-line
-                         * @noinspection PhpUndefinedMethodInspection
-                         */
-                        Cluster::notifyFork("child");
+                        Cluster::notifyFork(ForkEvent::CHILD);
                     }
                 }
 
