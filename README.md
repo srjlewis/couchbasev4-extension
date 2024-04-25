@@ -33,7 +33,7 @@ composer install phpfastcache/couchbasev4-extension
 
 To fork a php process correctly you will need to tell the Couchbase diver to prepare for the fork.
 
-You **must** call the drivers `Phpfastcache\Drivers\Couchbasev4\Driver::prepareToFork()` just before the `pcntl_fork()` call.
+⚠️ __WARNING__ You **must** call the drivers `Phpfastcache\Drivers\Couchbasev4\Driver::prepareToFork()` just before the `pcntl_fork()` call or the child process will lock up.
 
 #### Example
 ```php

@@ -15,7 +15,6 @@
 
 use Phpfastcache\CacheManager;
 use Phpfastcache\Exceptions\PhpfastcacheDriverCheckException;
-use Phpfastcache\Extensions\Drivers\Couchbasev4\Config as CouchbaseConfig;
 use Phpfastcache\Exceptions\PhpfastcacheDriverConnectException;
 use Phpfastcache\Helper\Psr16Adapter;
 use Phpfastcache\Tests\Helper\TestHelper;

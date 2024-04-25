@@ -1,3 +1,8 @@
+## 9.2.1
+#### 25 April 2024
+- __Driver Core__
+  - `Couchbasev4` Update to support couchbase 4.2.1 and above, which need a notify call when forking the process.
+
 ## 9.2.0
 ##### 10 january 2024
 - __Driver Core__
