@@ -21,11 +21,11 @@ use Phpfastcache\Tests\Helper\TestHelper;
 
 chdir(__DIR__);
 require_once __DIR__ . '/../vendor/autoload.php';
-$extensionVersion = (new ReflectionExtension('couchbase'))->getVersion();
+$extensionVersion = \phpversion('couchbase');
 $testHelper       = new TestHelper('Couchbasev4 driver - Extension Version ' . $extensionVersion);
 
 $configFileName = __DIR__ . '/Configs/' . ($argv[1] ?? 'github-actions') . '.php';
-if (!file_exists($configFileName)) {
+if (!\file_exists($configFileName)) {
     $configFileName = __DIR__ . '/Configs/github-actions.php';
 }
 
@@ -36,21 +36,21 @@ $config = (include $configFileName)
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
 
 $cache = new Psr16Adapter($cacheInstance);
-$value = random_int(1, 254);
+$value = \random_int(1, 254);
 
 $cache->set('forkFailTestKey', $value);
 
-$pid = pcntl_fork();
+$pid = \pcntl_fork();
 if ($pid == -1) {
     $testHelper->assertFail('Unable to fork');
 } else if ($pid) {
     $testHelper->runAsyncProcess('php "' . __DIR__ . '/Scripts/monitor_fork.php" ' . $pid);
-    pcntl_wait($status);
+    \pcntl_wait($status);
 } else {
     exit($cache->get('forkFailTestKey'));
 }
 
-if ($value === pcntl_wexitstatus($status)) {
+if ($value === \pcntl_wexitstatus($status)) {
     $testHelper->assertFail('The fork was a success was meant to lockup');
 } else {
     $testHelper->assertPass('The forked process locked up has expected');
@@ -64,29 +64,29 @@ $config = (include $configFileName)
 $cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
 
 $cache = new Psr16Adapter($cacheInstance);
-$value = random_int(1, 254);
+$value = \random_int(1, 254);
 
 $cache->set('forkSuccessTestKey', $value);
 
 try {
     \Phpfastcache\Extensions\Drivers\Couchbasev4\Driver::prepareToFork();
-    $pid = pcntl_fork();
+    $pid = \pcntl_fork();
     if ($pid == -1) {
         $testHelper->assertFail('Unable to fork');
     } else if ($pid) {
         $testHelper->runAsyncProcess('php "' . __DIR__ . '/Scripts/monitor_fork.php" ' . $pid);
-        pcntl_wait($status);
+        \pcntl_wait($status);
     } else {
         exit($cache->get('forkSuccessTestKey'));
     }
 
-    if ($value === pcntl_wexitstatus($status)) {
+    if ($value === \pcntl_wexitstatus($status)) {
         $testHelper->assertPass('The exit code is the one expected');
     } else {
         $testHelper->assertFail('The exit code is unexpected');
     }
 } catch (PhpfastcacheDriverCheckException) {
-    if(version_compare($extensionVersion, '4.2.0', '=')) {
+    if(\version_compare($extensionVersion, '4.2.0', '=')) {
         $testHelper->assertSkip('extension version 4.2.0 detected and can\'t be forked safely');
     } else {
         $testHelper->assertFail('Something as broken again');
