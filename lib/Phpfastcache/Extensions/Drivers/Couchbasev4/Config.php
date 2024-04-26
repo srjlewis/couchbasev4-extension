@@ -39,7 +39,6 @@ class Config extends ConfigurationOption
     protected bool $secure            = false;
     protected bool $allowFlush        = true;
     protected bool $flushFailSilently = false;
-    protected bool $doForkDetection   = false;
 
     protected ?ClusterOptions $clusterOptions = null;
 
@@ -223,19 +222,5 @@ class Config extends ConfigurationOption
             $this->clusterOptions = new ClusterOptions();
         }
         return $this->clusterOptions;
-    }
-
-    public function isDoForkDetection(): bool
-    {
-        return $this->doForkDetection;
-    }
-
-    public function setDoForkDetection(bool $doForkDetection): static
-    {
-        if ($doForkDetection && !extension_loaded('posix')) {
-            throw new PhpfastcacheInvalidArgumentException('Posix extension is required to enable the doForkDetection config entry.');
-        }
-
-        return $this->setProperty('doForkDetection', $doForkDetection);
     }
 }

@@ -18,9 +18,10 @@ jobs:
       matrix:
         operating-system: [ubuntu-latest]
         php-versions: ['8.0', '8.1', '8.2', '8.3']
-    name: PHP ${{ matrix.php-versions }} quality/tests on ${{ matrix.operating-system }}
+        ext-versions: ['couchbase-4.1.6', 'couchbase']
+    name: PHP ${{ matrix.php-versions }} using ${{ matrix.ext-versions }} quality/tests on ${{ matrix.operating-system }}
     env:
-      extensions: couchbase, pcntl, posix
+      extensions: ${{ matrix.ext-versions }}, pcntl, posix
       key: cache-v1
     steps:
       - name: Checkout

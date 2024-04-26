@@ -11,6 +11,9 @@
  * @author Georges.L (Geolim4)  <contact@geolim4.com>
  * @author Steven Lewis (srjlewis) https://github.com/srjlewis
  * @author Contributors  https://github.com/PHPSocialNetwork/phpfastcache/graphs/contributors
+ *
+ * @noinspection PhpMultipleClassDeclarationsInspection
+ * @noinspection PhpComposerExtensionStubsInspection
  */
 
 declare(strict_types=1);
@@ -23,13 +26,16 @@ use Couchbase\Cluster;
 use Couchbase\ClusterOptions;
 use Couchbase\Collection;
 use Couchbase\Exception\DocumentNotFoundException;
+use Couchbase\Exception\InvalidArgumentException;
+use Couchbase\Exception\TimeoutException;
+use Couchbase\ForkEvent;
 use Couchbase\GetResult;
 use Couchbase\Scope;
 use Couchbase\UpsertOptions;
-use DateTimeInterface;
 use Phpfastcache\Cluster\AggregatablePoolInterface;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
+use Phpfastcache\Core\Pool\CacheItemPoolTrait;
 use Phpfastcache\Core\Pool\ExtendedCacheItemPoolInterface;
 use Phpfastcache\Core\Pool\TaggableCacheItemPoolTrait;
 use Phpfastcache\Entities\DriverStatistic;
@@ -38,7 +44,6 @@ use Phpfastcache\Exceptions\PhpfastcacheDriverCheckException;
 use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
 use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 use Phpfastcache\Exceptions\PhpfastcacheUnsupportedMethodException;
-use ReflectionExtension;
 
 /**
  * @property Cluster $instance Instance of driver service
@@ -47,7 +52,11 @@ use ReflectionExtension;
  */
 class Driver implements AggregatablePoolInterface
 {
+    use CacheItemPoolTrait {
+        CacheItemPoolTrait::__construct as __parentConstruct;
+    }
     use TaggableCacheItemPoolTrait;
+
 
     protected Scope $scope;
 
@@ -57,12 +66,37 @@ class Driver implements AggregatablePoolInterface
 
     protected int $currentParentPID = 0;
 
+    protected static int $prepareToForkPPID = 0;
+
+    protected static string $extVersion;
+
+    protected static bool $posixLoaded;
+
+    /**
+     * Driver constructor.
+     * @param ConfigurationOption $config
+     * @param string $instanceId
+     * @param EventManagerInterface $em
+     */
+    public function __construct(ConfigurationOption $config, string $instanceId, EventManagerInterface $em)
+    {
+        static::$extVersion  ??= \phpversion('couchbase');
+        static::$posixLoaded ??= \extension_loaded('posix');
+
+        if (\version_compare(static::$extVersion, '4.2.0', '=') && static::$posixLoaded) {
+            $this->currentParentPID = \posix_getppid();
+        }
+
+        $this->__parentConstruct($config, $instanceId, $em);
+    }
+
+
     /**
      * @return bool
      */
     public function driverCheck(): bool
     {
-        return extension_loaded('couchbase') && (!$this->getConfig()->isDoForkDetection() || extension_loaded('posix'));
+        return \extension_loaded('couchbase');
     }
 
     public function getHelp(): string
@@ -80,29 +114,25 @@ class Driver implements AggregatablePoolInterface
             throw new PhpfastcacheDriverCheckException('You are using the Couchbase PHP SDK 2.x which is no longer supported in Phpfastcache v9');
         }
 
-        $extVersion = (new ReflectionExtension('couchbase'))->getVersion();
-        if (version_compare($extVersion, '4.0.0', '<') || version_compare($extVersion, '5.0.0', '>=')) {
-            throw new PhpfastcacheDriverCheckException("You are using Couchbase extension $extVersion, You need to use a Couchbase V4 extension");
+        if (\version_compare(static::$extVersion, '4.0.0', '<') || \version_compare(static::$extVersion, '5.0.0', '>=')) {
+            throw new PhpfastcacheDriverCheckException("You are using Couchbase extension " . static::$extVersion . ", You need to use a Couchbase V4 extension");
         }
+        return $this->connect();
+    }
 
-        if ($this->getConfig()->isDoForkDetection() && extension_loaded('posix')) {
-            // https://issues.couchbase.com/browse/PCBC-984
-            if (version_compare($extVersion, '4.2.0', '=')) {
-                throw new PhpfastcacheDriverCheckException("You are using Couchbase extension $extVersion, This version has a known bug with pcntl_fork()");
-            }
-
-            $this->currentParentPID = posix_getppid();
-        }
-
-        $schema = $this->getConfig()->getSecure() ? 'couchbases' : 'couchbase';
+    /**
+     * @throws InvalidArgumentException
+     */
+    protected function connect(?int $appendPPID = null): bool
+    {
+        $schema  = $this->getConfig()->getSecure() ? 'couchbases' : 'couchbase';
         $servers = $this->getConfig()->getServers();
 
-        $connectionString = $schema . '://' . implode(',', $servers) . '?ppid=' . $this->currentParentPID;
+        $connectionString = $schema . '://' . implode(',', $servers) . ($appendPPID ? "?ppid=$appendPPID" : '');
 
         $options = $this->getConfig()->getClusterOptions();
         $options->credentials($this->getConfig()->getUsername(), $this->getConfig()->getPassword());
         $this->instance = new Cluster($connectionString, $options); // @phpstan-ignore-line
-
         $this->setBucket($this->instance->bucket($this->getConfig()->getBucketName()));
         $this->setScope($this->getBucket()->scope($this->getConfig()->getScopeName()));
         $this->setCollection($this->getScope()->collection($this->getConfig()->getCollectionName()));
@@ -111,16 +141,57 @@ class Driver implements AggregatablePoolInterface
     }
 
     /**
-     * Work around for couchbase V4 not being fork safe
-     * https://issues.couchbase.com/projects/PCBC/issues/PCBC-886
+     * Needs to be call just before posix_fork() call or the child process will lock up
+     *
      * @return void
      * @throws PhpfastcacheDriverCheckException
      */
-    protected function checkCurrentParentPID(): void
+    public static function prepareToFork(): void
     {
-        if ($this->getConfig()->isDoForkDetection() && extension_loaded('posix')) {
-            if ($this->currentParentPID !== posix_getppid()) {
-                $this->driverConnect();
+        if (!static::$posixLoaded) {
+            throw new PhpfastcacheDriverCheckException('POSIX extension is required to prepare for forking');
+        }
+
+        if (\version_compare(static::$extVersion, '4.2.0', '=')) {
+            throw new PhpfastcacheDriverCheckException(
+                'You are using Couchbase extension ' . static::$extVersion .
+                ', This version has a known bug with pcntl_fork() and will lockup child processes.'
+            );
+        }
+
+        if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
+            Cluster::notifyFork(ForkEvent::PREPARE);
+        }
+
+        static::$prepareToForkPPID = posix_getpid();
+    }
+
+    /**
+     * @return void
+     * @throws PhpfastcacheDriverCheckException
+     */
+    protected function handleForkedProcess(): void
+    {
+        if (static::$posixLoaded) {
+            if (\version_compare(static::$extVersion, '4.2.0', '=') && $this->currentParentPID !== \posix_getppid()) {
+                // exit() call will fail and lockup, so child process kills itself
+                \posix_kill(\posix_getpid(), \SIGKILL);
+            }
+
+            if (static::$prepareToForkPPID) {
+                if (\version_compare(static::$extVersion, '4.2.0', '<') && static::$prepareToForkPPID !== \posix_getpid()) {
+                    $this->connect(\posix_getppid());
+                }
+
+                if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
+                    if (static::$prepareToForkPPID === \posix_getpid()) {
+                        Cluster::notifyFork(ForkEvent::PARENT);
+                    } else {
+                        Cluster::notifyFork(ForkEvent::CHILD);
+                    }
+                }
+
+                static::$prepareToForkPPID = 0;
             }
         }
     }
@@ -128,11 +199,14 @@ class Driver implements AggregatablePoolInterface
     /**
      * @param ExtendedCacheItemInterface $item
      * @return ?array<string, mixed>
+     * @throws CouchbaseException
+     * @throws PhpfastcacheDriverCheckException
+     * @throws TimeoutException
      */
     protected function driverRead(ExtendedCacheItemInterface $item): ?array
     {
         try {
-            $this->checkCurrentParentPID();
+            $this->handleForkedProcess();
             /**
              * CouchbaseBucket::get() returns a GetResult interface
              */
@@ -143,14 +217,16 @@ class Driver implements AggregatablePoolInterface
     }
 
     /**
-     * @param ExtendedCacheItemInterface $item
+     * @param ExtendedCacheItemInterface ...$item
      * @return array<array<string, mixed>>
+     * @throws PhpfastcacheDriverCheckException
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     protected function driverReadMultiple(ExtendedCacheItemInterface ...$items): array
     {
         try {
             $results = [];
-            $this->checkCurrentParentPID();
+            $this->handleForkedProcess();
             /**
              * CouchbaseBucket::get() returns a GetResult interface
              */
@@ -159,7 +235,7 @@ class Driver implements AggregatablePoolInterface
                 if (!$document->error()) {
                     $content = $document->content();
                     if ($content) {
-                        $decodedDocument = $this->decodeDocument($content);
+                        $decodedDocument                                                                     = $this->decodeDocument($content);
                         $results[$decodedDocument[ExtendedCacheItemPoolInterface::DRIVER_KEY_WRAPPER_INDEX]] = $this->decodeDocument($content);
                     }
                 }
@@ -176,13 +252,14 @@ class Driver implements AggregatablePoolInterface
      * @return bool
      * @throws PhpfastcacheInvalidArgumentException
      * @throws PhpfastcacheLogicException
+     * @throws PhpfastcacheDriverCheckException
      */
     protected function driverWrite(ExtendedCacheItemInterface $item): bool
     {
         $this->assertCacheItemType($item, Item::class);
 
         try {
-            $this->checkCurrentParentPID();
+            $this->handleForkedProcess();
             $this->getCollection()->upsert(
                 $item->getEncodedKey(),
                 $this->encodeDocument($this->driverPreWrap($item)),
@@ -198,11 +275,12 @@ class Driver implements AggregatablePoolInterface
      * @param string $key
      * @param string $encodedKey
      * @return bool
+     * @throws PhpfastcacheDriverCheckException
      */
     protected function driverDelete(string $key, string $encodedKey): bool
     {
         try {
-            $this->checkCurrentParentPID();
+            $this->handleForkedProcess();
             return $this->getCollection()->remove($encodedKey)->mutationToken() !== null;
         } catch (DocumentNotFoundException) {
             return true;
@@ -214,11 +292,13 @@ class Driver implements AggregatablePoolInterface
     /**
      * @param string[] $keys
      * @return bool
+     * @throws PhpfastcacheDriverCheckException
+     * @throws PhpfastcacheLogicException
      */
     protected function driverDeleteMultiple(array $keys): bool
     {
         try {
-            $this->checkCurrentParentPID();
+            $this->handleForkedProcess();
             $this->getCollection()->removeMulti(array_map(fn(string $key) => $this->getEncodedKey($key), $keys));
             return true;
         } catch (CouchbaseException) {
@@ -228,10 +308,13 @@ class Driver implements AggregatablePoolInterface
 
     /**
      * @return bool
+     * @throws PhpfastcacheDriverCheckException
+     * @throws PhpfastcacheUnsupportedMethodException
+     * @noinspection PhpRedundantCatchClauseInspection
      */
     protected function driverClear(): bool
     {
-        $this->checkCurrentParentPID();
+        $this->handleForkedProcess();
         if (!$this->instance->buckets()->getBucket($this->getConfig()->getBucketName())->flushEnabled()) {
             if ($this->getConfig()->isFlushFailSilently()) {
                 return false;
@@ -268,7 +351,7 @@ class Driver implements AggregatablePoolInterface
      */
     public function getStats(): DriverStatistic
     {
-        $this->checkCurrentParentPID();
+        $this->handleForkedProcess();
         /**
          * Between SDK 2 and 3 we lost a lot of useful information :(
          * @see https://docs.couchbase.com/java-sdk/current/project-docs/migrating-sdk-code-to-3.n.html#management-apis
@@ -341,9 +424,9 @@ class Driver implements AggregatablePoolInterface
      */
     protected function encodeDocument(array $data): array
     {
-        $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX] = $this->encode($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
+        $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]  = $this->encode($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
         $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX]
-            ->format(DateTimeInterface::ATOM);
+            ->format(\DateTimeInterface::ATOM);
 
         if ($this->getConfig()->isItemDetailedDate()) {
             $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX]
@@ -362,7 +445,7 @@ class Driver implements AggregatablePoolInterface
      */
     protected function decodeDocument(array $data): array
     {
-        $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX] = $this->unserialize($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
+        $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]  = $this->unserialize($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
         $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
             \DateTimeInterface::ATOM,
             $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX]
