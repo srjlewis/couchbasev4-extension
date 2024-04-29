@@ -32,9 +32,6 @@ use Couchbase\ForkEvent;
 use Couchbase\GetResult;
 use Couchbase\Scope;
 use Couchbase\UpsertOptions;
-use DateTime;
-use DateTimeInterface;
-use Exception;
 use Phpfastcache\Cluster\AggregatablePoolInterface;
 use Phpfastcache\Config\ConfigurationOption;
 use Phpfastcache\Core\Item\ExtendedCacheItemInterface;
@@ -47,11 +44,6 @@ use Phpfastcache\Exceptions\PhpfastcacheDriverCheckException;
 use Phpfastcache\Exceptions\PhpfastcacheInvalidArgumentException;
 use Phpfastcache\Exceptions\PhpfastcacheLogicException;
 use Phpfastcache\Exceptions\PhpfastcacheUnsupportedMethodException;
-use ReflectionExtension;
-
-use function bin2hex;
-use function class_exists;
-use function random_bytes;
 
 /**
  * @property Cluster $instance Instance of driver service
@@ -88,11 +80,11 @@ class Driver implements AggregatablePoolInterface
      */
     public function __construct(ConfigurationOption $config, string $instanceId, EventManagerInterface $em)
     {
-        static::$extVersion  ??= (new ReflectionExtension('couchbase'))->getVersion();
-        static::$posixLoaded ??= extension_loaded('posix');
+        static::$extVersion  ??= \phpversion('couchbase');
+        static::$posixLoaded ??= \extension_loaded('posix');
 
-        if (version_compare(static::$extVersion, '4.2.0', '=') && static::$posixLoaded) {
-            $this->currentParentPID = posix_getppid();
+        if (\version_compare(static::$extVersion, '4.2.0', '=') && static::$posixLoaded) {
+            $this->currentParentPID = \posix_getppid();
         }
 
         $this->__parentConstruct($config, $instanceId, $em);
@@ -104,7 +96,7 @@ class Driver implements AggregatablePoolInterface
      */
     public function driverCheck(): bool
     {
-        return extension_loaded('couchbase');
+        return \extension_loaded('couchbase');
     }
 
     public function getHelp(): string
@@ -118,11 +110,11 @@ class Driver implements AggregatablePoolInterface
      */
     protected function driverConnect(): bool
     {
-        if (!class_exists(ClusterOptions::class)) {
+        if (!\class_exists(ClusterOptions::class)) {
             throw new PhpfastcacheDriverCheckException('You are using the Couchbase PHP SDK 2.x which is no longer supported in Phpfastcache v9');
         }
 
-        if (version_compare(static::$extVersion, '4.0.0', '<') || version_compare(static::$extVersion, '5.0.0', '>=')) {
+        if (\version_compare(static::$extVersion, '4.0.0', '<') || \version_compare(static::$extVersion, '5.0.0', '>=')) {
             throw new PhpfastcacheDriverCheckException("You are using Couchbase extension " . static::$extVersion . ", You need to use a Couchbase V4 extension");
         }
         return $this->connect();
@@ -149,6 +141,8 @@ class Driver implements AggregatablePoolInterface
     }
 
     /**
+     * Needs to be call just before posix_fork() call or the child process will lock up
+     *
      * @return void
      * @throws PhpfastcacheDriverCheckException
      */
@@ -158,14 +152,14 @@ class Driver implements AggregatablePoolInterface
             throw new PhpfastcacheDriverCheckException('POSIX extension is required to prepare for forking');
         }
 
-        if (version_compare(static::$extVersion, '4.2.0', '=')) {
+        if (\version_compare(static::$extVersion, '4.2.0', '=')) {
             throw new PhpfastcacheDriverCheckException(
                 'You are using Couchbase extension ' . static::$extVersion .
                 ', This version has a known bug with pcntl_fork() and will lockup child processes.'
             );
         }
 
-        if (version_compare(static::$extVersion, '4.2.1', '>=')) {
+        if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
             Cluster::notifyFork(ForkEvent::PREPARE);
         }
 
@@ -173,27 +167,24 @@ class Driver implements AggregatablePoolInterface
     }
 
     /**
-     * Needs to be called directly before posix_fork() call
-     * Work around for couchbase V4 (<= 4.1.6) not being fork safe
-     * https://issues.couchbase.com/projects/PCBC/issues/PCBC-886
      * @return void
      * @throws PhpfastcacheDriverCheckException
      */
     protected function handleForkedProcess(): void
     {
         if (static::$posixLoaded) {
-            if (version_compare(static::$extVersion, '4.2.0', '=') && $this->currentParentPID !== posix_getppid()) {
+            if (\version_compare(static::$extVersion, '4.2.0', '=') && $this->currentParentPID !== \posix_getppid()) {
                 // exit() call will fail and lockup, so child process kills itself
-                posix_kill(posix_getpid(), SIGKILL);
+                \posix_kill(\posix_getpid(), \SIGKILL);
             }
 
             if (static::$prepareToForkPPID) {
-                if (version_compare(static::$extVersion, '4.2.0', '<') && static::$prepareToForkPPID !== posix_getpid()) {
-                    $this->connect(posix_getppid());
+                if (\version_compare(static::$extVersion, '4.2.0', '<') && static::$prepareToForkPPID !== \posix_getpid()) {
+                    $this->connect(\posix_getppid());
                 }
 
-                if (version_compare(static::$extVersion, '4.2.1', '>=')) {
-                    if (static::$prepareToForkPPID === posix_getpid()) {
+                if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
+                    if (static::$prepareToForkPPID === \posix_getpid()) {
                         Cluster::notifyFork(ForkEvent::PARENT);
                     } else {
                         Cluster::notifyFork(ForkEvent::CHILD);
@@ -356,7 +347,7 @@ class Driver implements AggregatablePoolInterface
 
     /**
      * @return DriverStatistic
-     * @throws Exception
+     * @throws \Exception
      */
     public function getStats(): DriverStatistic
     {
@@ -365,7 +356,7 @@ class Driver implements AggregatablePoolInterface
          * Between SDK 2 and 3 we lost a lot of useful information :(
          * @see https://docs.couchbase.com/java-sdk/current/project-docs/migrating-sdk-code-to-3.n.html#management-apis
          */
-        $info = $this->instance->diagnostics(bin2hex(random_bytes(16)));
+        $info = $this->instance->diagnostics(\bin2hex(\random_bytes(16)));
 
         return (new DriverStatistic())
             ->setSize(0)
@@ -435,14 +426,14 @@ class Driver implements AggregatablePoolInterface
     {
         $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]  = $this->encode($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
         $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX]
-            ->format(DateTimeInterface::ATOM);
+            ->format(\DateTimeInterface::ATOM);
 
         if ($this->getConfig()->isItemDetailedDate()) {
             $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX]
-                ->format(DateTimeInterface::ATOM);
+                ->format(\DateTimeInterface::ATOM);
 
             $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX] = $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX]
-                ->format(DateTimeInterface::ATOM);
+                ->format(\DateTimeInterface::ATOM);
         }
 
         return $data;
@@ -455,19 +446,19 @@ class Driver implements AggregatablePoolInterface
     protected function decodeDocument(array $data): array
     {
         $data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]  = $this->unserialize($data[ExtendedCacheItemPoolInterface::DRIVER_DATA_WRAPPER_INDEX]);
-        $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = DateTime::createFromFormat(
-            DateTimeInterface::ATOM,
+        $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
+            \DateTimeInterface::ATOM,
             $data[ExtendedCacheItemPoolInterface::DRIVER_EDATE_WRAPPER_INDEX]
         );
 
         if ($this->getConfig()->isItemDetailedDate()) {
-            $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = DateTime::createFromFormat(
-                DateTimeInterface::ATOM,
+            $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
+                \DateTimeInterface::ATOM,
                 $data[ExtendedCacheItemPoolInterface::DRIVER_CDATE_WRAPPER_INDEX]
             );
 
-            $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX] = DateTime::createFromFormat(
-                DateTimeInterface::ATOM,
+            $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX] = \DateTime::createFromFormat(
+                \DateTimeInterface::ATOM,
                 $data[ExtendedCacheItemPoolInterface::DRIVER_MDATE_WRAPPER_INDEX]
             );
         }
