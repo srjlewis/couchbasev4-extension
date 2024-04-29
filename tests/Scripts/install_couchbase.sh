@@ -78,8 +78,8 @@ curl -i "http://127.0.0.1:8091/pools/default/buckets" \
 
 curl -i -X PUT "http://127.0.0.1:8091/settings/rbac/users/local/${USERNAME2}" \
     -d password=${PASSWORD} \
-    -d roles=bucket_full_access[*]
-    -u ${USERNAME}:${PASSWORD} \
+    -d roles=bucket_full_access[*] \
+    -u ${USERNAME}:${PASSWORD}
 
 
 
