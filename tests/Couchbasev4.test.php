@@ -58,15 +58,17 @@ if ($value === \pcntl_wexitstatus($status)) {
 
 $testHelper->printInfoText('Running forking success process test');
 
-$config = (include $configFileName)
-    ->setUseStaticItemCaching(false);
+$config1 = (include $configFileName)->setUseStaticItemCaching(false);
+$config2 = (include $configFileName)->setUseStaticItemCaching(false)->setUsername('test2');
 
-$cacheInstance = CacheManager::getInstance('Couchbasev4', $config);
+$cache1 = new Psr16Adapter(CacheManager::getInstance('Couchbasev4', $config1));
+$cache2 = new Psr16Adapter(CacheManager::getInstance('Couchbasev4', $config2));
 
-$cache = new Psr16Adapter($cacheInstance);
-$value = \random_int(1, 254);
+$value1 = \random_int(1, 125);
+$value2 = \random_int(1, 125);
 
-$cache->set('forkSuccessTestKey', $value);
+$cache1->set('forkSuccessTestKey1', $value1);
+$cache2->set('forkSuccessTestKey2', $value2);
 
 try {
     \Phpfastcache\Extensions\Drivers\Couchbasev4\Driver::prepareToFork();
@@ -77,13 +79,13 @@ try {
         $testHelper->runAsyncProcess('php "' . __DIR__ . '/Scripts/monitor_fork.php" ' . $pid);
         \pcntl_wait($status);
     } else {
-        exit($cache->get('forkSuccessTestKey'));
+        exit($cache1->get('forkSuccessTestKey1') + $cache2->get('forkSuccessTestKey2'));
     }
 
-    if ($value === \pcntl_wexitstatus($status)) {
-        $testHelper->assertPass('The exit code is the one expected');
+    if (($value1 + $value2) === \pcntl_wexitstatus($status)) {
+        $testHelper->assertPass('The success fork was a success and returned correctly');
     } else {
-        $testHelper->assertFail('The exit code is unexpected');
+        $testHelper->assertFail('The success fork failed');
     }
 } catch (PhpfastcacheDriverCheckException) {
     if(\version_compare($extensionVersion, '4.2.0', '=')) {
