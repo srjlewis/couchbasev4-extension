@@ -179,8 +179,8 @@ class Driver implements AggregatablePoolInterface
             }
 
             if (static::$prepareToForkPPID) {
-                if (\version_compare(static::$extVersion, '4.2.0', '<') && static::$prepareToForkPPID !== \posix_getpid()) {
-                    $this->connect(\posix_getppid());
+                if (\version_compare(static::$extVersion, '4.2.0', '<')) {
+                    $this->currentParentPID = static::$prepareToForkPPID;
                 }
 
                 if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
@@ -192,6 +192,11 @@ class Driver implements AggregatablePoolInterface
                 }
 
                 static::$prepareToForkPPID = 0;
+            }
+
+            if ($this->currentParentPID) {
+                $this->connect(\posix_getppid());
+                $this->currentParentPID = 0;
             }
         }
     }
