@@ -64,8 +64,8 @@ $config2 = (include $configFileName)->setUseStaticItemCaching(false)->setUsernam
 $cache1 = new Psr16Adapter(CacheManager::getInstance('Couchbasev4', $config1));
 $cache2 = new Psr16Adapter(CacheManager::getInstance('Couchbasev4', $config2));
 
-$value1 = random_int(1, 125);
-$value2 = random_int(1, 125);
+$value1 = \random_int(1, 125);
+$value2 = \random_int(1, 125);
 
 $cache1->set('forkSuccessTestKey1', $value1);
 $cache2->set('forkSuccessTestKey2', $value2);
@@ -82,7 +82,7 @@ try {
         exit($cache1->get('forkSuccessTestKey1') + $cache2->get('forkSuccessTestKey2'));
     }
 
-    if (($value1 + $value2) === pcntl_wexitstatus($status)) {
+    if (($value1 + $value2) === \pcntl_wexitstatus($status)) {
         $testHelper->assertPass('The success fork was a success and returned correctly');
     } else {
         $testHelper->assertFail('The success fork failed');
