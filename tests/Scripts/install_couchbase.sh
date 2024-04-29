@@ -11,6 +11,7 @@ export CB_PACKAGE=couchbase-server-community_7.2.2-linux_amd64.deb
 export SERVICES="kv,n1ql,index,fts"
 
 export USERNAME=test
+export USERNAME2=test2
 export PASSWORD=phpfastcache
 
 export MEMORY_QUOTA=256
@@ -74,6 +75,12 @@ curl -i "http://127.0.0.1:8091/pools/default/buckets" \
     -d ramQuotaMB=256 \
     -d flushEnabled=1 \
     -u ${USERNAME}:${PASSWORD} \
+
+curl -i -X PUT "http://127.0.0.1:8091/settings/rbac/users/local/${USERNAME2}" \
+    -d password=${PASSWORD} \
+    -d roles=bucket_full_access[*]
+    -u ${USERNAME}:${PASSWORD} \
+
 
 
 echo "# Couchbase running successfully"
