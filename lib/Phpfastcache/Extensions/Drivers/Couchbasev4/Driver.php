@@ -263,7 +263,7 @@ class Driver implements AggregatablePoolInterface
             $this->getCollection()->upsert(
                 $item->getEncodedKey(),
                 $this->encodeDocument($this->driverPreWrap($item)),
-                (new UpsertOptions())->expiry($item->getTtl())
+                (new UpsertOptions())->expiry($item->getExpirationDate())
             );
             return true;
         } catch (CouchbaseException) {
