@@ -70,6 +70,15 @@ $value2 = \random_int(1, 125);
 $cache1->set('forkSuccessTestKey1', $value1);
 $cache2->set('forkSuccessTestKey2', $value2);
 
+// 1576800000 is the int limit within Couchbase for the ttl before the need to use DateTime
+// so using an int like '\time() + 3600' would produce an error, to reproduce the error
+// within phpFastCache we need to push the date 1576800001s in the future to overflow the ttl int
+if($cache->set('bigTTL', 'test', new DateInterval('PT1576800001S'))) {
+    $testHelper->assertPass('Set with large ttl succeeded');
+} else {
+    $testHelper->assertFail('Set with large ttl failed');
+}
+
 try {
     \Phpfastcache\Extensions\Drivers\Couchbasev4\Driver::prepareToFork();
     $pid = \pcntl_fork();
