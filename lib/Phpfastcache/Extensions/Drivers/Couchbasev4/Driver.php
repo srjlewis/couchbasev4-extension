@@ -148,6 +148,10 @@ class Driver implements AggregatablePoolInterface
      */
     public static function prepareToFork(): void
     {
+        if (!isset(static::$posixLoaded) && !isset(static::$extVersion)) {
+            return;
+        }
+
         if (!static::$posixLoaded) {
             throw new PhpfastcacheDriverCheckException('POSIX extension is required to prepare for forking');
         }
