@@ -164,6 +164,13 @@ class Driver implements AggregatablePoolInterface
         }
 
         if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
+            if (static::$prepareToForkPPID) {
+                if (static::$prepareToForkPPID === \posix_getpid()) {
+                    Cluster::notifyFork(ForkEvent::PARENT);
+                } else {
+                    Cluster::notifyFork(ForkEvent::CHILD);
+                }
+            }
             Cluster::notifyFork(ForkEvent::PREPARE);
         }
 
