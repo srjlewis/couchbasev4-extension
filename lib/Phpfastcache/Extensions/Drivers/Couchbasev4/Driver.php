@@ -90,6 +90,11 @@ class Driver implements AggregatablePoolInterface
         $this->__parentConstruct($config, $instanceId, $em);
     }
 
+    public function __destruct()
+    {
+        static::handleNotifyFork();
+    }
+
 
     /**
      * @return bool
@@ -164,6 +169,7 @@ class Driver implements AggregatablePoolInterface
         }
 
         if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
+            static::handleNotifyFork();
             Cluster::notifyFork(ForkEvent::PREPARE);
         }
 
@@ -188,15 +194,20 @@ class Driver implements AggregatablePoolInterface
                     $this->connect(\posix_getppid());
                 }
 
-                if (\version_compare(static::$extVersion, '4.2.1', '>=')) {
-                    if (static::$prepareToForkPPID === \posix_getpid()) {
-                        Cluster::notifyFork(ForkEvent::PARENT);
-                    } else {
-                        Cluster::notifyFork(ForkEvent::CHILD);
-                    }
-                    static::$prepareToForkPPID = 0;
-                }
+                static::handleNotifyFork();
             }
+        }
+    }
+
+    protected static function handleNotifyFork(): void
+    {
+        if (static::$prepareToForkPPID && \version_compare(static::$extVersion, '4.2.1', '>=')) {
+            if (static::$prepareToForkPPID === \posix_getpid()) {
+                Cluster::notifyFork(ForkEvent::PARENT);
+            } else {
+                Cluster::notifyFork(ForkEvent::CHILD);
+            }
+            static::$prepareToForkPPID = 0;
         }
     }
 
@@ -214,7 +225,7 @@ class Driver implements AggregatablePoolInterface
             /**
              * CouchbaseBucket::get() returns a GetResult interface
              */
-            return $this->decodeDocument((array)$this->getCollection()->get($item->getEncodedKey())->content());
+            return $this->decodeDocument((array) $this->getCollection()->get($item->getEncodedKey())->content());
         } catch (DocumentNotFoundException) {
             return null;
         }

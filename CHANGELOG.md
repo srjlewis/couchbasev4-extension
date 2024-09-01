@@ -1,3 +1,9 @@
+## 9.2.2
+#### 29 July 2024
+- __Driver Core__
+  - `Couchbasev4` Allow calling of `prepareToFork()` when driver is not initialized to allow switch between drivers.
+  - `Couchbasev4` Tell couchbase to reattach its threads if needed, while preparing to forking and on destruct.
+
 ## 9.2.1
 #### 25 April 2024
 - __Driver Core__
