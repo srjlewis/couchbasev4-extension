@@ -82,6 +82,7 @@ if($cache->set('bigTTL', 'test', new DateInterval('PT1576800001S'))) {
 try {
     \Phpfastcache\Extensions\Drivers\Couchbasev4\Driver::prepareToFork();
     $pid = \pcntl_fork();
+    \Phpfastcache\Extensions\Drivers\Couchbasev4\Driver::handleNotifyFork();
     if ($pid == -1) {
         $testHelper->assertFail('Unable to fork');
     } else if ($pid) {

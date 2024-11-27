@@ -1,3 +1,10 @@
+## 9.2.3
+#### 27 November 2024
+- __Driver Core__
+  - `Couchbasev4` Allow call to `handleNotifyFork()` after process has been forked, this is due 
+  - to a change in the couchbase SDK that needs parent and child to be notified at the same time.
+
+
 ## 9.2.2
 #### 29 July 2024
 - __Driver Core__

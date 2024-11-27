@@ -199,8 +199,12 @@ class Driver implements AggregatablePoolInterface
         }
     }
 
-    protected static function handleNotifyFork(): void
+    public static function handleNotifyFork(): void
     {
+        if (!isset(static::$posixLoaded) && !isset(static::$extVersion)) {
+            return;
+        }
+
         if (static::$prepareToForkPPID && \version_compare(static::$extVersion, '4.2.1', '>=')) {
             if (static::$prepareToForkPPID === \posix_getpid()) {
                 Cluster::notifyFork(ForkEvent::PARENT);
