@@ -207,9 +207,9 @@ class Driver implements AggregatablePoolInterface
 
         if (static::$prepareToForkPPID && \version_compare(static::$extVersion, '4.2.1', '>=')) {
             if (static::$prepareToForkPPID === \posix_getpid()) {
+                usleep(500);
                 Cluster::notifyFork(ForkEvent::PARENT);
             } else {
-                usleep(500);
                 Cluster::notifyFork(ForkEvent::CHILD);
             }
             static::$prepareToForkPPID = 0;
