@@ -91,6 +91,8 @@ try {
     } else {
         restore_error_handler();
         restore_exception_handler();
+        error_reporting(E_ALL);
+        ini_set('display_errors', 1);
         echo 'forkSuccessTestKey1: ' . $cache1->get('forkSuccessTestKey1')."\r\n";
         echo 'forkSuccessTestKey2: ' . $cache2->get('forkSuccessTestKey2')."\r\n";
         exit($cache1->get('forkSuccessTestKey1') + $cache2->get('forkSuccessTestKey2'));
