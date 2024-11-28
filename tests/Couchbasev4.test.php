@@ -89,6 +89,8 @@ try {
         $testHelper->runAsyncProcess('php "' . __DIR__ . '/Scripts/monitor_fork.php" ' . $pid);
         \pcntl_wait($status);
     } else {
+        echo $cache1->get('forkSuccessTestKey1')."\r\n";
+        echo $cache1->get('forkSuccessTestKey2')."\r\n";
         exit($cache1->get('forkSuccessTestKey1') + $cache2->get('forkSuccessTestKey2'));
     }
 
