@@ -209,7 +209,6 @@ class Driver implements AggregatablePoolInterface
             if (static::$prepareToForkPPID === \posix_getpid()) {
                 Cluster::notifyFork(ForkEvent::PARENT);
             } else {
-                sleep(500);
                 Cluster::notifyFork(ForkEvent::CHILD);
             }
             static::$prepareToForkPPID = 0;
