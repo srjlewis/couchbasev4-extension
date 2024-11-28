@@ -89,10 +89,12 @@ try {
         $testHelper->runAsyncProcess('php "' . __DIR__ . '/Scripts/monitor_fork.php" ' . $pid);
         \pcntl_wait($status);
     } else {
-        echo $cache1->get('forkSuccessTestKey1')."\r\n";
-        echo $cache1->get('forkSuccessTestKey2')."\r\n";
+        echo 'forkSuccessTestKey1' . $cache1->get('forkSuccessTestKey1')."\r\n";
+        echo 'forkSuccessTestKey2' . $cache1->get('forkSuccessTestKey2')."\r\n";
         exit($cache1->get('forkSuccessTestKey1') + $cache2->get('forkSuccessTestKey2'));
     }
+
+    $testHelper->printDebugText('Child returned <green>' . \pcntl_wexitstatus($status) . '</green>');
 
     if (($value1 + $value2) === \pcntl_wexitstatus($status)) {
         $testHelper->assertPass('The success fork was a success and returned correctly');
